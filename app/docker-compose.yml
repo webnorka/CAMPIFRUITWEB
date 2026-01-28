@@ -1,0 +1,7 @@
+services:
+  web:
+    build: .
+    ports:
+      - "3000:3001"
+    restart: always
+    container_name: campifruit_catalog

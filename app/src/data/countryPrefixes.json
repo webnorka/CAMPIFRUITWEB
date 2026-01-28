@@ -1,0 +1,122 @@
+[
+    {
+        "code": "+1",
+        "country": "Estados Unidos",
+        "flag": "🇺🇸",
+        "continent": "América del Norte"
+    },
+    {
+        "code": "+52",
+        "country": "México",
+        "flag": "🇲🇽",
+        "continent": "América del Norte"
+    },
+    {
+        "code": "+502",
+        "country": "Guatemala",
+        "flag": "🇬🇹",
+        "continent": "América Central"
+    },
+    {
+        "code": "+503",
+        "country": "El Salvador",
+        "flag": "🇸🇻",
+        "continent": "América Central"
+    },
+    {
+        "code": "+504",
+        "country": "Honduras",
+        "flag": "🇭🇳",
+        "continent": "América Central"
+    },
+    {
+        "code": "+505",
+        "country": "Nicaragua",
+        "flag": "🇳🇮",
+        "continent": "América Central"
+    },
+    {
+        "code": "+506",
+        "country": "Costa Rica",
+        "flag": "🇨🇷",
+        "continent": "América Central"
+    },
+    {
+        "code": "+507",
+        "country": "Panamá",
+        "flag": "🇵🇦",
+        "continent": "América Central"
+    },
+    {
+        "code": "+51",
+        "country": "Perú",
+        "flag": "🇵🇪",
+        "continent": "América del Sur"
+    },
+    {
+        "code": "+54",
+        "country": "Argentina",
+        "flag": "🇦🇷",
+        "continent": "América del Sur"
+    },
+    {
+        "code": "+55",
+        "country": "Brasil",
+        "flag": "🇧🇷",
+        "continent": "América del Sur"
+    },
+    {
+        "code": "+56",
+        "country": "Chile",
+        "flag": "🇨🇱",
+        "continent": "América del Sur"
+    },
+    {
+        "code": "+57",
+        "country": "Colombia",
+        "flag": "🇨🇴",
+        "continent": "América del Sur"
+    },
+    {
+        "code": "+58",
+        "country": "Venezuela",
+        "flag": "🇻🇪",
+        "continent": "América del Sur"
+    },
+    {
+        "code": "+591",
+        "country": "Bolivia",
+        "flag": "🇧🇴",
+        "continent": "América del Sur"
+    },
+    {
+        "code": "+593",
+        "country": "Ecuador",
+        "flag": "🇪🇨",
+        "continent": "América del Sur"
+    },
+    {
+        "code": "+595",
+        "country": "Paraguay",
+        "flag": "🇵🇾",
+        "continent": "América del Sur"
+    },
+    {
+        "code": "+598",
+        "country": "Uruguay",
+        "flag": "🇺🇾",
+        "continent": "América del Sur"
+    },
+    {
+        "code": "+34",
+        "country": "España",
+        "flag": "🇪🇸",
+        "continent": "Europa"
+    },
+    {
+        "code": "+41",
+        "country": "Suiza",
+        "flag": "🇨🇭",
+        "continent": "Europa"
+    }
+]
