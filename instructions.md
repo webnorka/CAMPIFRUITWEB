@@ -73,9 +73,9 @@ scp -r ./app usuario@tu-vps:/ruta/destino
 ```
 
 ### 3. Levantar en el VPS
-Una vez dentro de la carpeta `app` en el VPS:
+Una vez dentro de la carpeta `CAMPIFRUITWEB` en el VPS (en la raíz del proyecto):
 ```bash
-docker compose up --build -d
+docker compose -f docker-compose-vps.yml up --build -d
 ```
 
 ### 4. Acceso externo
@@ -91,5 +91,14 @@ sudo ufw allow 3000
 
 ## 📁 Estructura relevante
 - `app/server.js`: Servidor Node.js mínimo para servir los archivos estáticos en producción.
-- `app/Dockerfile`: Define cómo se construye la imagen de producción.
-- `app/docker-compose.yml`: Gestión simplificada del contenedor.
+- `Dockerfile`: Define cómo se construye la imagen de producción (ubicado en la raíz).
+- `docker-compose-vps.yml`: Gestión simplificada del contenedor para VPS.
+
+---
+
+## 🛠️ Configuración en Dokploy
+
+Si estás usando Dokploy, asegúrate de configurar estos parámetros:
+- **Build Type**: Dockerfile
+- **Dockerfile Path**: `Dockerfile` (en la raíz)
+- **Build Path**: `.` (en la raíz)

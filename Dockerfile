@@ -1,10 +1,10 @@
 # Build stage
 FROM node:20-alpine AS build-stage
 WORKDIR /app
-COPY package*.json ./
-RUN ls -la
+# Note the 'app/' prefix for source files to support root context
+COPY app/package*.json ./
 RUN npm install
-COPY . .
+COPY app/ .
 RUN npm run build
 
 # Production stage
