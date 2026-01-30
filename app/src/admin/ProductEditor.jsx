@@ -155,8 +155,8 @@ export default function ProductEditor({ setHasUnsavedChanges }) {
                 handleCancel();
             }, 1500);
         } catch (error) {
-            console.error(error);
-            alert('Error al guardar el producto. Revisa la consola o intenta nuevamente.');
+            console.error('Detailed Error:', error);
+            alert(`Error al guardar: ${error.message || 'Consulta la consola para más detalles'}`);
         }
     };
 

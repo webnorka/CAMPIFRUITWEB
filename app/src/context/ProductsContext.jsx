@@ -38,6 +38,7 @@ export function ProductsProvider({ children }) {
     const addProduct = async (product) => {
         // Normalizar de camelCase (frontend) a snake_case (DB)
         const productToInsert = {
+            id: crypto.randomUUID(), // Generate ID client-side if DB default is missing
             name: product.name,
             description: product.description,
             price: Number(product.price) || 0,
