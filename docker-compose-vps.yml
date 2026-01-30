@@ -3,6 +3,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        VITE_SUPABASE_URL: https://fopjqjoxwelmrrfowbmv.supabase.co
+        VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZvcGpxam94d2VsbXJyZm93Ym12Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkzNzMyNzcsImV4cCI6MjA4NDk0OTI3N30.W_wlLjJN8JetGJbbtO0gTmioMGk_nweFByShjsVFOgs
 
     ports:
       - "3002:3001"

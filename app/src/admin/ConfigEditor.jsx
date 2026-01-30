@@ -1,12 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Save, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { useConfig } from '../context/ConfigContext';
 import countryPrefixes from '../data/countryPrefixes.json';
 
-export default function ConfigEditor() {
+export default function ConfigEditor({ setHasUnsavedChanges }) {
     const { config, updateConfig, resetConfig } = useConfig();
     const [formData, setFormData] = useState({ ...config });
     const [saved, setSaved] = useState(false);
+
+    // Track unsaved changes
+    useEffect(() => {
+        const isDirty = (JSON.stringify(formData) !== JSON.stringify(config)) && !saved;
+        if (setHasUnsavedChanges) setHasUnsavedChanges(isDirty);
+    }, [formData, config, saved, setHasUnsavedChanges]);
 
     const handleSubmit = (e) => {
         e.preventDefault();

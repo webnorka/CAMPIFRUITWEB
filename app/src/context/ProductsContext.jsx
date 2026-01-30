@@ -40,8 +40,8 @@ export function ProductsProvider({ children }) {
         const productToInsert = {
             name: product.name,
             description: product.description,
-            price: Number(product.price),
-            offer_price: product.offerPrice ? Number(product.offerPrice) : 0,
+            price: Number(product.price) || 0,
+            offer_price: Number(product.offerPrice) || 0,
             on_sale: !!product.onSale,
             category: product.category,
             image: product.image,

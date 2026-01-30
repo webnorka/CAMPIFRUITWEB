@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
     Plus,
     Trash2,
@@ -23,7 +23,7 @@ import { useConfig } from '../context/ConfigContext';
 import { formatPrice } from '../utils/whatsapp';
 import ImageUpload from '../components/ImageUpload';
 
-export default function ProductEditor() {
+export default function ProductEditor({ setHasUnsavedChanges }) {
     const {
         products,
         addProduct,
@@ -56,6 +56,12 @@ export default function ProductEditor() {
         weight: ''
     };
     const [formData, setFormData] = useState(emptyProduct);
+
+    // Track unsaved changes
+    useEffect(() => {
+        const isDirty = (isAdding || editingId !== null) && !saved;
+        if (setHasUnsavedChanges) setHasUnsavedChanges(isDirty);
+    }, [isAdding, editingId, saved, setHasUnsavedChanges]);
 
     // Filtering logic
     const filteredProducts = useMemo(() => {
@@ -137,16 +143,21 @@ export default function ProductEditor() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (editingId) {
-            await editProduct(editingId, formData);
-        } else {
-            await addProduct(formData);
+        try {
+            if (editingId) {
+                await editProduct(editingId, formData);
+            } else {
+                await addProduct(formData);
+            }
+            setSaved(true);
+            setTimeout(() => {
+                setSaved(false);
+                handleCancel();
+            }, 1500);
+        } catch (error) {
+            console.error(error);
+            alert('Error al guardar el producto. Revisa la consola o intenta nuevamente.');
         }
-        setSaved(true);
-        setTimeout(() => {
-            setSaved(false);
-            handleCancel();
-        }, 1500);
     };
 
     return (
@@ -351,6 +362,9 @@ export default function ProductEditor() {
                                                         className="input-field pr-12 bg-white appearance-none"
                                                     >
                                                         {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                                                        {!categories.includes(formData.category) && formData.category && (
+                                                            <option key={formData.category} value={formData.category}>{formData.category}</option>
+                                                        )}
                                                         <option value="NEW" className="text-primary-600 font-bold">+ Nueva categoría...</option>
                                                     </select>
                                                     <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-forest/20 pointer-events-none" />
