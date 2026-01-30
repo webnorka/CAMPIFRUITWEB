@@ -60,7 +60,9 @@ export default function AdminPanel() {
                                 <span className="block font-display font-black text-lg tracking-tight leading-none mb-1 text-white group-hover:text-accent transition-colors">
                                     {config.businessName}
                                 </span>
-                                <span className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] group-hover:text-white/50 transition-colors">Panel Pro</span>
+                                <span className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] group-hover:text-white/50 transition-colors">
+                                    Panel Pro <span className="text-white/10">v{__APP_VERSION__}</span>
+                                </span>
                             </div>
                         </button>
 
