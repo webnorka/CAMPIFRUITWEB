@@ -145,20 +145,27 @@
   animation: bounceShort 2s infinite ease-in-out;
 }
 
-/* Scrollbar styling */
+/* Scrollbar styling - Thinner for mobile */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-organic);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
   background: var(--color-forest);
   border-radius: 10px;
+  opacity: 0.5;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-accent);
+}
+
+/* Mobile tap highlight remove */
+* {
+  -webkit-tap-highlight-color: transparent;
 }

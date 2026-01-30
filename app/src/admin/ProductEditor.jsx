@@ -160,6 +160,21 @@ export default function ProductEditor({ setHasUnsavedChanges }) {
         }
     };
 
+    const handleDelete = async (id) => {
+        if (window.confirm('¿Estás seguro de que quieres eliminar este producto?')) {
+            try {
+                await deleteProduct(id);
+                // If we were editing this product, close the editor
+                if (editingId === id) {
+                    handleCancel();
+                }
+            } catch (error) {
+                console.error('Error deleting product:', error);
+                alert('Error al eliminar el producto');
+            }
+        }
+    };
+
     return (
         <div className="animate-fade-in pb-20">
             {/* Header */}

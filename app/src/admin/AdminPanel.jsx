@@ -10,7 +10,9 @@ import {
     Edit2,
     ChevronRight,
     LayoutDashboard,
-    ShoppingBag
+    ShoppingBag,
+    Menu,
+    X
 } from 'lucide-react';
 import { useAuth } from './AuthProvider';
 import { useConfig } from '../context/ConfigContext';
@@ -26,6 +28,7 @@ export default function AdminPanel() {
     const navigate = useNavigate();
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const [showExitPrompt, setShowExitPrompt] = useState(false);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     // Reset unsaved changes when changing tabs (as components unmount)
     useEffect(() => {
@@ -42,14 +45,39 @@ export default function AdminPanel() {
     };
 
     return (
-        <div className="min-h-screen bg-organic flex flex-col md:flex-row">
+        <div className="min-h-screen bg-organic flex flex-col md:flex-row relative">
+            {/* Mobile Header */}
+            <div className="md:hidden flex items-center justify-between p-4 bg-forest text-white shadow-md z-30 relative">
+                <div className="flex items-center gap-3">
+                    <img src="/logo_circular.png" className="w-8 h-8 rounded-full" alt="Logo" />
+                    <span className="font-display font-black text-sm">{config.businessName}</span>
+                </div>
+                <button
+                    onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                    className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                >
+                    {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                </button>
+            </div>
+
+            {/* Sidebar Overlay for Mobile */}
+            {mobileMenuOpen && (
+                <div
+                    className="md:hidden fixed inset-0 z-20 bg-black/50 backdrop-blur-sm"
+                    onClick={() => setMobileMenuOpen(false)}
+                />
+            )}
+
             {/* Sidebar */}
-            <aside className="w-full md:w-72 bg-forest text-white flex flex-col shadow-2xl z-20">
-                <div className="p-8">
-                    <div className="relative z-50">
+            <aside className={`
+                fixed md:static inset-y-0 left-0 z-30 w-72 bg-forest text-white flex flex-col shadow-2xl transition-transform duration-300 ease-in-out
+                ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+            `}>
+                <div className="p-8 flex flex-col h-full">
+                    <div className="relative z-50 mb-8 hidden md:block">
                         <button
                             onClick={handleLogoClick}
-                            className="flex items-center gap-4 mb-8 w-full text-left group transition-transform active:scale-95"
+                            className="flex items-center gap-4 w-full text-left group transition-transform active:scale-95"
                         >
                             <img
                                 src="/logo_circular.png"
@@ -90,9 +118,9 @@ export default function AdminPanel() {
                         )}
                     </div>
 
-                    <nav className="space-y-3">
+                    <nav className="space-y-3 flex-1">
                         <button
-                            onClick={() => setActiveTab('orders')}
+                            onClick={() => { setActiveTab('orders'); setMobileMenuOpen(false); }}
                             className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all duration-300 ${activeTab === 'orders'
                                 ? 'bg-accent text-forest shadow-xl shadow-accent/20'
                                 : 'text-white/50 hover:bg-white/5 hover:text-white'
@@ -104,7 +132,7 @@ export default function AdminPanel() {
                         </button>
 
                         <button
-                            onClick={() => setActiveTab('products')}
+                            onClick={() => { setActiveTab('products'); setMobileMenuOpen(false); }}
                             className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all duration-300 ${activeTab === 'products'
                                 ? 'bg-accent text-forest shadow-xl shadow-accent/20'
                                 : 'text-white/50 hover:bg-white/5 hover:text-white'
@@ -116,7 +144,7 @@ export default function AdminPanel() {
                         </button>
 
                         <button
-                            onClick={() => setActiveTab('config')}
+                            onClick={() => { setActiveTab('config'); setMobileMenuOpen(false); }}
                             className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all duration-300 ${activeTab === 'config'
                                 ? 'bg-accent text-forest shadow-xl shadow-accent/20'
                                 : 'text-white/50 hover:bg-white/5 hover:text-white'
@@ -127,22 +155,22 @@ export default function AdminPanel() {
                             <ChevronRight className={`ml-auto w-4 h-4 opacity-50 transition-transform ${activeTab === 'config' ? 'rotate-90' : ''}`} />
                         </button>
                     </nav>
-                </div>
 
-                <div className="mt-auto p-8 border-t border-white/5">
-                    <button
-                        onClick={logout}
-                        className="w-full flex items-center gap-4 px-5 py-4 text-rose-400 hover:bg-rose-400/10 rounded-2xl font-black text-xs uppercase tracking-widest transition-all"
-                    >
-                        <LogOut className="w-5 h-5" />
-                        Desconectar
-                    </button>
+                    <div className="pt-8 border-t border-white/5 mt-auto">
+                        <button
+                            onClick={logout}
+                            className="w-full flex items-center gap-4 px-5 py-4 text-rose-400 hover:bg-rose-400/10 rounded-2xl font-black text-xs uppercase tracking-widest transition-all"
+                        >
+                            <LogOut className="w-5 h-5" />
+                            Desconectar
+                        </button>
+                    </div>
                 </div>
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 overflow-y-auto p-6 md:p-12">
-                <div className="max-w-6xl mx-auto animate-fade-in">
+            <main className="flex-1 overflow-y-auto p-4 md:p-12 h-[calc(100vh-64px)] md:h-screen">
+                <div className="max-w-6xl mx-auto animate-fade-in pb-20 md:pb-0">
                     {activeTab === 'orders' && <OrdersList setHasUnsavedChanges={setHasUnsavedChanges} />}
                     {activeTab === 'products' && <ProductEditor setHasUnsavedChanges={setHasUnsavedChanges} />}
                     {activeTab === 'config' && <ConfigEditor setHasUnsavedChanges={setHasUnsavedChanges} />}
