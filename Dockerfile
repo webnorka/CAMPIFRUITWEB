@@ -5,10 +5,10 @@ WORKDIR /app
 COPY app/package*.json ./
 RUN npm install --legacy-peer-deps
 COPY app/ .
-ARG VITE_SUPABASE_URL
-ARG VITE_SUPABASE_ANON_KEY
-ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
-ENV VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
+
+# Supabase public (anon) keys — baked into frontend at build time
+ENV VITE_SUPABASE_URL=https://fopjqjoxwelmrrfowbmv.supabase.co
+ENV VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZvcGpxam94d2VsbXJyZm93Ym12Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkzNzMyNzcsImV4cCI6MjA4NDk0OTI3N30.W_wlLjJN8JetGJbbtO0gTmioMGk_nweFByShjsVFOgs
 
 RUN npm run build
 
