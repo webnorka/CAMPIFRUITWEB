@@ -1,14 +1,9 @@
 import { ArrowRight, ChevronDown } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useConfig } from '../context/ConfigContext';
 
 export default function Hero() {
     const { config } = useConfig();
-    const navigate = useNavigate();
-
-    const goToCatalog = () => {
-        navigate('/catalogo');
-    };
 
     return (
         <section className="relative min-h-[92vh] flex items-center overflow-hidden pt-20">
@@ -68,8 +63,8 @@ export default function Hero() {
             </div>
 
             {/* Navigation Button to Catalog */}
-            <button
-                onClick={goToCatalog}
+            <Link
+                to="/catalogo"
                 className="absolute bottom-12 left-1/2 -translate-x-1/2 md:left-20 md:translate-x-0 group flex flex-col items-center gap-4 transition-all hover:translate-y-1 animate-fade-in"
                 style={{ animationDelay: '0.5s' }}
             >
@@ -79,7 +74,7 @@ export default function Hero() {
                 <div className="w-14 h-14 rounded-full border-2 border-accent flex items-center justify-center bg-accent text-forest shadow-2xl group-hover:bg-white group-hover:border-white transition-all animate-bounce-short">
                     <ChevronDown className="w-6 h-6" />
                 </div>
-            </button>
+            </Link>
         </section>
     );
 }

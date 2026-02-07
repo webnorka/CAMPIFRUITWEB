@@ -1,11 +1,11 @@
 import { X, Plus, Minus, Trash2, MessageCircle, ShoppingBag, Check, ArrowRight, Loader2, Tag, AlertCircle, MapPin, CreditCard } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useConfig } from '../context/ConfigContext';
 import { formatPrice, generateWhatsAppUrl } from '../utils/whatsapp';
 import { createSecureOrder } from '../services/checkoutService';
-import { supabase } from '../utils/supabaseClient';
+import { createStripeCheckoutSession } from '../services/stripeService';
 import { validateAndConsumeDiscount } from '../services/discountService';
 import { useToast } from '../context/ToastContext';
 import { useCustomerAuth } from '../context/CustomerAuthContext';
@@ -18,6 +18,7 @@ export default function CartModal() {
     const navigate = useNavigate();
     const toast = useToast();
     const [customerName, setCustomerName] = useState('');
+    const [customerEmail, setCustomerEmail] = useState('');
     const [notes, setNotes] = useState('');
     const [showCheckout, setShowCheckout] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -58,6 +59,16 @@ export default function CartModal() {
         setDiscountError('');
     };
 
+    // Lock body scroll when modal is open — must be before early return (Rules of Hooks)
+    useEffect(() => {
+        if (isOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => { document.body.style.overflow = ''; };
+    }, [isOpen]);
+
     if (!isOpen) return null;
 
     const handleSendWhatsApp = async () => {
@@ -75,6 +86,7 @@ export default function CartModal() {
                 notes,
                 discountCode: discountResult ? discountCode : null,
                 discountAmount: discountAmount,
+                customerId: customer?.id,
                 shippingAddress: selectedAddress ? {
                     label: selectedAddress.label,
                     street: selectedAddress.street,
@@ -85,8 +97,8 @@ export default function CartModal() {
                 } : null,
             });
 
-            // 2. Abrir WhatsApp
-            const url = generateWhatsAppUrl(config, items, customerName, notes);
+            // 2. Abrir WhatsApp (include discount in message)
+            const url = generateWhatsAppUrl(config, items, customerName, notes, discountAmount);
             window.open(url, '_blank');
 
             // 3. Limpiar y cerrar
@@ -125,25 +137,20 @@ export default function CartModal() {
                 country: selectedAddress.country
             } : null;
 
-            const { data, error } = await supabase.functions.invoke('create-checkout-session', {
-                body: {
-                    items: items.map(i => ({ id: i.id, quantity: i.quantity })),
-                    customerName,
-                    notes,
-                    discountCode: discountResult ? discountCode : null,
-                    discountAmount: discountAmount,
-                    shippingAddress: address,
-                    successUrl: `${window.location.origin}/pedido-confirmado?session_id={CHECKOUT_SESSION_ID}`,
-                    cancelUrl: window.location.origin,
-                }
+            const data = await createStripeCheckoutSession({
+                items,
+                customerName,
+                customerEmail,
+                customerId: customer?.id,
+                notes,
+                discountCode: discountResult ? discountCode : null,
+                discountAmount,
+                shippingAddress: address,
+                successUrl: `${window.location.origin}/pedido-confirmado?session_id={CHECKOUT_SESSION_ID}`,
+                cancelUrl: window.location.origin,
             });
 
-            if (error) throw error;
-            if (data?.sessionUrl) {
-                window.location.href = data.sessionUrl;
-            } else {
-                throw new Error('No se recibió la URL de pago');
-            }
+            window.location.href = data.sessionUrl;
         } catch (error) {
             console.error('Stripe checkout error:', error);
             toast.error('Error al iniciar el pago con tarjeta. Inténtalo de nuevo.');
@@ -185,6 +192,29 @@ export default function CartModal() {
                     </button>
                 </div>
 
+                {/* Step Progress Bar */}
+                {items.length > 0 && (
+                    <div className="px-8 pt-4 pb-2 bg-white/30">
+                        <div className="flex items-center gap-0">
+                            <div className="flex items-center gap-2">
+                                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black transition-all duration-300 ${!showCheckout ? 'bg-forest text-accent shadow-lg' : 'bg-forest/10 text-forest/40'}`}>
+                                    1
+                                </div>
+                                <span className={`text-[10px] font-black uppercase tracking-widest transition-colors ${!showCheckout ? 'text-forest' : 'text-forest/30'}`}>Carrito</span>
+                            </div>
+                            <div className="flex-1 h-0.5 mx-3 bg-forest/10 rounded-full overflow-hidden">
+                                <div className={`h-full bg-forest rounded-full transition-all duration-500 ${showCheckout ? 'w-full' : 'w-0'}`} />
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black transition-all duration-300 ${showCheckout ? 'bg-forest text-accent shadow-lg' : 'bg-forest/10 text-forest/40'}`}>
+                                    2
+                                </div>
+                                <span className={`text-[10px] font-black uppercase tracking-widest transition-colors ${showCheckout ? 'text-forest' : 'text-forest/30'}`}>Finalizar</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-organic/50">
                     {items.length === 0 ? (
@@ -207,6 +237,13 @@ export default function CartModal() {
                                     value={customerName}
                                     onChange={(e) => setCustomerName(e.target.value)}
                                     placeholder="Tu nombre completo"
+                                    className="input-field mb-3"
+                                />
+                                <input
+                                    type="email"
+                                    value={customerEmail}
+                                    onChange={(e) => setCustomerEmail(e.target.value)}
+                                    placeholder="tu@email.com"
                                     className="input-field"
                                 />
                             </div>
@@ -390,7 +427,7 @@ export default function CartModal() {
                         {!showCheckout && (
                             <div className="flex justify-between items-end mb-8 px-2">
                                 <div>
-                                    <p className="text-[10px] font-black text-forest/30 uppercase tracking-[0.3em] mb-1">Subtotalestimado</p>
+                                    <p className="text-[10px] font-black text-forest/30 uppercase tracking-[0.3em] mb-1">Subtotal estimado</p>
                                     <span className="text-4xl font-display font-black text-forest">
                                         {formatPrice(totalPrice, config.currencySymbol)}
                                     </span>
@@ -447,7 +484,13 @@ export default function CartModal() {
                             </div>
                         ) : (
                             <button
-                                onClick={() => setShowCheckout(true)}
+                                onClick={() => {
+                                    if (isAuthenticated && customer) {
+                                        if (!customerName) setCustomerName(customer.name || '');
+                                        if (!customerEmail) setCustomerEmail(customer.email || '');
+                                    }
+                                    setShowCheckout(true);
+                                }}
                                 className="w-full btn-primary group h-20 text-lg uppercase tracking-[0.2em]"
                             >
                                 <Check className="w-6 h-6 mr-2" />

@@ -14,4 +14,20 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Core React runtime
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          // Supabase client (heavy)
+          'vendor-supabase': ['@supabase/supabase-js'],
+          // Icons library
+          'vendor-icons': ['lucide-react'],
+          // Utilities
+          'vendor-utils': ['lodash', 'react-helmet-async'],
+        },
+      },
+    },
+  },
 })

@@ -20,7 +20,7 @@ import { useCarousel } from '../context/CarouselContext';
 import { useProducts } from '../context/ProductsContext';
 import ImageUpload from '../components/ImageUpload';
 
-export default function CarouselEditor({ setHasUnsavedChanges }) {
+export default function CarouselEditor() {
     const confirm = useConfirm();
     const toast = useToast();
     const { products } = useProducts();
@@ -39,7 +39,7 @@ export default function CarouselEditor({ setHasUnsavedChanges }) {
     });
     const [showSuccess, setShowSuccess] = useState(false);
 
-    const onSaleProducts = useMemo(() => products.filter(p => p.onSale), [products]);
+    const _onSaleProducts = useMemo(() => products.filter(p => p.onSale), [products]);
 
     const handleAdd = () => {
         setIsAdding(true);
@@ -98,7 +98,7 @@ export default function CarouselEditor({ setHasUnsavedChanges }) {
             handleCancel();
             setShowSuccess(true);
             setTimeout(() => setShowSuccess(false), 2000);
-        } catch (error) {
+        } catch {
             toast.error('Error al guardar el slide');
         }
     };

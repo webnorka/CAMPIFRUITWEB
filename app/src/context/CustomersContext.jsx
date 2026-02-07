@@ -180,6 +180,7 @@ export function CustomersProvider({ children }) {
     );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useCustomers() {
     const context = useContext(CustomersContext);
     if (!context) {

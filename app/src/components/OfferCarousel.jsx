@@ -46,9 +46,11 @@ export default function OfferCarousel() {
     }, [currentIndex, slides.length, config.showCarousel, config.carouselSpeed, resetTimeout]);
 
     // Reset index if slides change
+    /* eslint-disable react-hooks/set-state-in-effect */
     useEffect(() => {
         if (currentIndex >= slides.length) setCurrentIndex(0);
     }, [slides.length, currentIndex]);
+    /* eslint-enable react-hooks/set-state-in-effect */
 
     if (!config.showCarousel || slides.length === 0) return null;
 
@@ -78,7 +80,7 @@ export default function OfferCarousel() {
                 {slides.map((slide, index) => {
                     const product = slide.product;
                     const discount = product && product.price > 0
-                        ? Math.round((1 - ((product.offerPrice || product.offer_price || product.price) / product.price)) * 100)
+                        ? Math.round((1 - ((product.offerPrice || product.price) / product.price)) * 100)
                         : 0;
                     const imageUrl = slide.imageUrl || product?.image || '/placeholder-product.jpg';
 
@@ -120,7 +122,7 @@ export default function OfferCarousel() {
                                     {slide.type === 'product' && product ? (
                                         <>
                                             <p className="text-2xl md:text-3xl font-black text-accent">
-                                                {config.currencySymbol}{(product.offerPrice || product.offer_price || product.price).toLocaleString()}
+                                                {config.currencySymbol}{(product.offerPrice || product.price).toLocaleString()}
                                             </p>
                                             {product.onSale && (
                                                 <p className="text-lg md:text-xl font-bold text-white/40 line-through">

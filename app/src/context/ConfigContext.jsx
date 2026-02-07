@@ -7,9 +7,9 @@ const ConfigContext = createContext();
 export function ConfigProvider({ children }) {
     const [config, setConfig] = useState({
         businessName: "Campifruit",
-        currencySymbol: "$",
+        currencySymbol: "",
         whatsappNumber: "",
-        defaultCountryPrefix: "57",
+        defaultCountryPrefix: "",
         heroTitle: "",
         heroSubtitle: "",
         footerDescription: "",
@@ -39,9 +39,9 @@ export function ConfigProvider({ children }) {
             if (data) {
                 setConfig({
                     businessName: data.business_name || "Campifruit",
-                    currencySymbol: data.currency_symbol || "$",
+                    currencySymbol: data.currency_symbol || "",
                     whatsappNumber: data.whatsapp_number || "",
-                    defaultCountryPrefix: data.default_country_prefix || '57',
+                    defaultCountryPrefix: data.default_country_prefix || "",
                     heroTitle: data.hero_title || "",
                     heroSubtitle: data.hero_subtitle || "",
                     heroImage: data.hero_image || "",
@@ -137,6 +137,7 @@ export function ConfigProvider({ children }) {
     );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useConfig() {
     const context = useContext(ConfigContext);
     if (!context) {

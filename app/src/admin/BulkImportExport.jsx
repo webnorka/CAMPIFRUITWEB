@@ -70,7 +70,7 @@ function parseCSV(text) {
     return rows;
 }
 
-export default function BulkImportExport({ setHasUnsavedChanges }) {
+export default function BulkImportExport() {
     const { families } = useFamilies();
     const { products, refreshProducts } = useProducts();
     const [tab, setTab] = useState('export');
@@ -248,8 +248,8 @@ export default function BulkImportExport({ setHasUnsavedChanges }) {
                 <button
                     onClick={() => { setTab('export'); setPreview(null); setImportResult(null); }}
                     className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${tab === 'export'
-                            ? 'bg-forest text-accent shadow-lg shadow-forest/20'
-                            : 'bg-white text-forest/40 border border-forest/10 hover:border-forest/20'
+                        ? 'bg-forest text-accent shadow-lg shadow-forest/20'
+                        : 'bg-white text-forest/40 border border-forest/10 hover:border-forest/20'
                         }`}
                 >
                     <Download className="w-4 h-4" /> Exportar
@@ -257,8 +257,8 @@ export default function BulkImportExport({ setHasUnsavedChanges }) {
                 <button
                     onClick={() => { setTab('import'); setImportResult(null); }}
                     className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${tab === 'import'
-                            ? 'bg-forest text-accent shadow-lg shadow-forest/20'
-                            : 'bg-white text-forest/40 border border-forest/10 hover:border-forest/20'
+                        ? 'bg-forest text-accent shadow-lg shadow-forest/20'
+                        : 'bg-white text-forest/40 border border-forest/10 hover:border-forest/20'
                         }`}
                 >
                     <Upload className="w-4 h-4" /> Importar

@@ -1,28 +1,29 @@
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { ChevronRight, Plus, Check, Minus, Tag, ShoppingCart, Heart, ArrowLeft, Package } from 'lucide-react';
 import { useProducts } from '../context/ProductsContext';
 import { useFamilies } from '../context/FamiliesContext';
 import { useConfig } from '../context/ConfigContext';
 import { useCart } from '../context/CartContext';
+import { useWishlist } from '../context/WishlistContext';
+import { useCustomerAuth } from '../context/CustomerAuthContext';
+import { useProductVariants } from '../hooks/useProductVariants';
 import { formatPrice } from '../utils/whatsapp';
 import ProductCard from '../components/ProductCard';
 import SEOHead from '../components/SEOHead';
-import { supabase } from '../utils/supabaseClient';
 
 export default function ProductDetailPage() {
     const { slug } = useParams();
-    const navigate = useNavigate();
     const { products, loading } = useProducts();
     const { families } = useFamilies();
     const { config } = useConfig();
-    const { addToCart, items, updateQuantity } = useCart();
+    const { addToCart, items } = useCart();
+    const { toggleWishlist, isInWishlist } = useWishlist();
+    const { isAuthenticated } = useCustomerAuth();
     const [qty, setQty] = useState(1);
     const [added, setAdded] = useState(false);
-    const [selectedImage, setSelectedImage] = useState(0);
-    const [variants, setVariants] = useState([]);
     const [selectedVariant, setSelectedVariant] = useState(null);
-    const [loadingVariants, setLoadingVariants] = useState(false);
+    const wishlisted = product ? isInWishlist(product.id) : false;
 
     // Find product by slug (slug = id for existing products)
     const product = products.find(p => p.slug === slug || p.id === slug);
@@ -41,7 +42,7 @@ export default function ProductDetailPage() {
 
     // Determine effective price based on selected variant or product
     const activeItem = selectedVariant || product;
-    const effectivePrice = activeItem?.onSale ? (activeItem.offerPrice || activeItem.offer_price) : activeItem?.price;
+    const effectivePrice = activeItem?.onSale ? activeItem.offerPrice : activeItem?.price;
     const discount = product?.onSale
         ? Math.round((1 - product.offerPrice / product.price) * 100)
         : 0;
@@ -50,7 +51,7 @@ export default function ProductDetailPage() {
         const cartItem = {
             ...product,
             price: selectedVariant ? selectedVariant.price : product.price,
-            offerPrice: selectedVariant ? (selectedVariant.offer_price || selectedVariant.price) : product.offerPrice,
+            offerPrice: selectedVariant ? (selectedVariant.offerPrice || selectedVariant.price) : product.offerPrice,
             weight: selectedVariant?.weight || product.weight,
             ...(selectedVariant ? {
                 variantId: selectedVariant.id,
@@ -68,23 +69,18 @@ export default function ProductDetailPage() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }, [slug]);
 
-    // Fetch variants when product has_variants
+    // Fetch variants via dedicated hook
+    const { variants, loading: loadingVariants } = useProductVariants(product?.id, product?.has_variants);
+
+    // Auto-select first variant when variants load
     useEffect(() => {
-        if (product?.has_variants) {
-            setLoadingVariants(true);
-            supabase.from('product_variants').select('*').eq('product_id', product.id).eq('active', true).order('name')
-                .then(({ data }) => {
-                    const v = data || [];
-                    setVariants(v);
-                    if (v.length > 0) setSelectedVariant(v[0]);
-                    setLoadingVariants(false);
-                })
-                .catch(() => setLoadingVariants(false));
-        } else {
-            setVariants([]);
+        if (variants.length > 0 && !selectedVariant) {
+            setSelectedVariant(variants[0]);
+        } else if (variants.length === 0) {
             setSelectedVariant(null);
         }
-    }, [product?.id, product?.has_variants]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [variants]);
 
     if (loading) {
         return (
@@ -205,10 +201,24 @@ export default function ProductDetailPage() {
                             {family?.name || product.category}
                         </span>
 
-                        {/* Product Name */}
-                        <h1 className="text-3xl sm:text-5xl font-display font-black text-forest tracking-tight leading-[1.1] mb-4 sm:mb-6">
-                            {product.name}
-                        </h1>
+                        {/* Product Name + Wishlist */}
+                        <div className="flex items-start gap-3 mb-4 sm:mb-6">
+                            <h1 className="text-3xl sm:text-5xl font-display font-black text-forest tracking-tight leading-[1.1] flex-1">
+                                {product.name}
+                            </h1>
+                            {isAuthenticated && (
+                                <button
+                                    onClick={() => toggleWishlist(product.id)}
+                                    className={`shrink-0 mt-1 p-3 rounded-2xl transition-all duration-300 active:scale-90 ${wishlisted
+                                            ? 'bg-rose-50 text-rose-500 shadow-sm border border-rose-100'
+                                            : 'bg-forest/5 text-forest/30 hover:text-rose-400 hover:bg-rose-50 border border-transparent'
+                                        }`}
+                                    aria-label={wishlisted ? 'Quitar de favoritos' : 'Añadir a favoritos'}
+                                >
+                                    <Heart className={`w-5 h-5 sm:w-6 sm:h-6 ${wishlisted ? 'fill-current' : ''}`} />
+                                </button>
+                            )}
+                        </div>
 
                         {/* Description */}
                         <p className="text-sm sm:text-base text-forest/50 leading-relaxed mb-8 font-medium max-w-lg">
@@ -279,10 +289,10 @@ export default function ProductDetailPage() {
                         <div className="bg-white rounded-[2rem] p-6 sm:p-8 shadow-xl border border-forest/5">
                             {/* Price */}
                             <div className="flex items-end gap-4 mb-6">
-                                {product.onSale || (selectedVariant && selectedVariant.offer_price && selectedVariant.offer_price < selectedVariant.price) ? (
+                                {product.onSale || (selectedVariant && selectedVariant.offerPrice && selectedVariant.offerPrice < selectedVariant.price) ? (
                                     <>
                                         <span className="text-4xl sm:text-5xl font-black text-forest leading-none">
-                                            {formatPrice(selectedVariant ? (selectedVariant.offer_price || selectedVariant.price) : product.offerPrice, config.currencySymbol)}
+                                            {formatPrice(selectedVariant ? (selectedVariant.offerPrice || selectedVariant.price) : product.offerPrice, config.currencySymbol)}
                                         </span>
                                         <div className="flex flex-col pb-1">
                                             <span className="text-base sm:text-lg font-bold text-forest/20 line-through">
@@ -367,9 +377,7 @@ export default function ProductDetailPage() {
                         </div>
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                             {relatedProducts.map(p => (
-                                <Link key={p.id} to={`/producto/${p.slug || p.id}`} className="block">
-                                    <ProductCard product={p} />
-                                </Link>
+                                <ProductCard key={p.id} product={p} />
                             ))}
                         </div>
                     </section>

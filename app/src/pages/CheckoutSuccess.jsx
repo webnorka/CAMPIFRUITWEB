@@ -9,7 +9,7 @@ export default function CheckoutSuccess() {
     const orderData = location.state?.orderData;
 
     return (
-        <div className="min-h-[80vh] flex items-center justify-center px-6 py-20">
+        <div className="min-h-[80vh] bg-organic flex items-center justify-center px-6 py-20 pt-32">
             <div className="max-w-lg w-full text-center">
                 {/* Success animation */}
                 <div className="w-24 h-24 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-8 animate-bounce-short">

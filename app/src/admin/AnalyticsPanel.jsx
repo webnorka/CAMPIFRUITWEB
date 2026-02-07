@@ -4,6 +4,20 @@ import { supabase } from '../utils/supabaseClient';
 import { useConfig } from '../context/ConfigContext';
 import { formatPrice } from '../utils/whatsapp';
 
+// eslint-disable-next-line no-unused-vars
+const KpiCard = ({ icon: Icon, label, value, sub, color = 'text-forest' }) => (
+    <div className="card-bento p-6 bg-white">
+        <div className="flex items-center gap-3 mb-4">
+            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${color === 'text-accent-dark' ? 'bg-accent/20' : color === 'text-indigo-600' ? 'bg-indigo-50' : color === 'text-emerald-600' ? 'bg-emerald-50' : 'bg-forest/5'}`}>
+                <Icon className={`w-5 h-5 ${color}`} />
+            </div>
+            <p className="text-[9px] font-black text-forest/30 uppercase tracking-[0.2em]">{label}</p>
+        </div>
+        <p className={`text-2xl font-display font-black ${color} mb-1`}>{value}</p>
+        {sub && <p className="text-[10px] font-bold text-forest/30">{sub}</p>}
+    </div>
+);
+
 const PERIODS = [
     { key: '7d', label: '7 días' },
     { key: '30d', label: '30 días' },
@@ -14,7 +28,7 @@ const PERIODS = [
 export default function AnalyticsPanel() {
     const { config } = useConfig();
     const [orders, setOrders] = useState([]);
-    const [products, setProducts] = useState([]);
+    const [_products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [period, setPeriod] = useState('30d');
 
@@ -93,18 +107,6 @@ export default function AnalyticsPanel() {
         );
     }
 
-    const KpiCard = ({ icon: Icon, label, value, sub, color = 'text-forest' }) => (
-        <div className="card-bento p-6 bg-white">
-            <div className="flex items-center gap-3 mb-4">
-                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${color === 'text-accent-dark' ? 'bg-accent/20' : color === 'text-indigo-600' ? 'bg-indigo-50' : color === 'text-emerald-600' ? 'bg-emerald-50' : 'bg-forest/5'}`}>
-                    <Icon className={`w-5 h-5 ${color}`} />
-                </div>
-                <p className="text-[9px] font-black text-forest/30 uppercase tracking-[0.2em]">{label}</p>
-            </div>
-            <p className={`text-2xl font-display font-black ${color} mb-1`}>{value}</p>
-            {sub && <p className="text-[10px] font-bold text-forest/30">{sub}</p>}
-        </div>
-    );
 
     return (
         <div className="animate-fade-in pb-20">

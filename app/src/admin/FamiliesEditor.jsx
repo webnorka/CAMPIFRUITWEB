@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useConfirm } from '../components/ConfirmModal';
 import { useToast } from '../context/ToastContext';
 import {
@@ -17,7 +17,7 @@ import {
 import { useFamilies } from '../context/FamiliesContext';
 import ImageUpload from '../components/ImageUpload';
 
-export default function FamiliesEditor({ setHasUnsavedChanges }) {
+export default function FamiliesEditor() {
     const confirm = useConfirm();
     const toast = useToast();
     const { families, loading, addFamily, editFamily, deleteFamily, reorderFamilies } = useFamilies();
@@ -62,7 +62,7 @@ export default function FamiliesEditor({ setHasUnsavedChanges }) {
             handleCancel();
             setShowSuccess(true);
             setTimeout(() => setShowSuccess(false), 2000);
-        } catch (error) {
+        } catch {
             toast.error('Error al guardar la familia');
         }
     };
@@ -71,7 +71,7 @@ export default function FamiliesEditor({ setHasUnsavedChanges }) {
         if (!await confirm('¿Eliminar esta familia? Los productos asociados quedarán sin categoría.')) return;
         try {
             await deleteFamily(id);
-        } catch (error) {
+        } catch {
             toast.error('Error al eliminar');
         }
     };
@@ -79,7 +79,7 @@ export default function FamiliesEditor({ setHasUnsavedChanges }) {
     const handleToggleActive = async (family) => {
         try {
             await editFamily(family.id, { active: !family.active });
-        } catch (error) {
+        } catch {
             toast.error('Error al cambiar estado');
         }
     };
@@ -235,7 +235,7 @@ export default function FamiliesEditor({ setHasUnsavedChanges }) {
                     </div>
                 ) : (
                     <div className="divide-y divide-forest/5">
-                        {families.map((family, index) => (
+                        {families.map((family) => (
                             <div
                                 key={family.id}
                                 draggable

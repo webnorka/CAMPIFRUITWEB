@@ -41,9 +41,11 @@ export default function CustomersPanel() {
         setLoading(false);
     };
 
+    /* eslint-disable react-hooks/set-state-in-effect */
     useEffect(() => {
         fetchCustomers();
     }, []);
+    /* eslint-enable react-hooks/set-state-in-effect */
 
     const filteredCustomers = useMemo(() => {
         return customers.filter(c =>

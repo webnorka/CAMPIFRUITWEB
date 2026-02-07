@@ -24,7 +24,6 @@ import {
 import { useAuth } from './AuthProvider';
 import { useIsEditor } from './AuthProvider';
 import { useConfig } from '../context/ConfigContext';
-import { useProducts } from '../context/ProductsContext';
 import ConfigEditor from './ConfigEditor';
 import ProductEditor from './ProductEditor';
 import OrdersList from './OrdersList';
@@ -48,10 +47,12 @@ export default function AdminPanel() {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     // Reset unsaved changes when changing tabs (as components unmount)
+    /* eslint-disable react-hooks/set-state-in-effect */
     useEffect(() => {
         setHasUnsavedChanges(false);
         setShowExitPrompt(false);
     }, [activeTab]);
+    /* eslint-enable react-hooks/set-state-in-effect */
 
     const handleLogoClick = () => {
         if (hasUnsavedChanges) {

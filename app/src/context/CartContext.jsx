@@ -24,7 +24,7 @@ export function CartProvider({ children }) {
     }, [items]);
 
     // Cart key: productId + variantId for unique identification
-    const getCartKey = useCallback((item) => {
+    const _getCartKey = useCallback((item) => {
         return item.variantId ? `${item.id}-${item.variantId}` : item.id;
     }, []);
 
@@ -96,6 +96,7 @@ export function CartProvider({ children }) {
     );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useCart() {
     const context = useContext(CartContext);
     if (!context) {

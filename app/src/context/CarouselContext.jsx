@@ -166,6 +166,7 @@ export function CarouselProvider({ children }) {
     );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useCarousel() {
     const context = useContext(CarouselContext);
     if (!context) {

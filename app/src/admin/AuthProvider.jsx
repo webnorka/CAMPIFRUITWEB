@@ -33,7 +33,17 @@ export function AuthProvider({ children }) {
     };
 
     useEffect(() => {
-        supabase.auth.getSession().then(({ data: { session } }) => {
+        supabase.auth.getSession().then(async ({ data: { session }, error }) => {
+            if (error) {
+                console.warn('[AdminAuth] Session error, clearing stale state:', error.message);
+                await supabase.auth.signOut();
+                setUser(null);
+                setIsAuthenticated(false);
+                setIsAdmin(false);
+                setRole(null);
+                setLoading(false);
+                return;
+            }
             const currentUser = session?.user ?? null;
             setUser(currentUser);
             setIsAuthenticated(!!session);
@@ -44,7 +54,19 @@ export function AuthProvider({ children }) {
             }
         });
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+            // Auto-recover from stale/expired tokens
+            if (_event === 'TOKEN_REFRESHED' && !session) {
+                console.warn('[AdminAuth] Token refresh failed, signing out');
+                await supabase.auth.signOut();
+                setUser(null);
+                setIsAuthenticated(false);
+                setIsAdmin(false);
+                setRole(null);
+                setLoading(false);
+                return;
+            }
+
             const currentUser = session?.user ?? null;
             setUser(currentUser);
             setIsAuthenticated(!!session);
@@ -81,6 +103,7 @@ export function AuthProvider({ children }) {
     );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
     const context = useContext(AuthContext);
     if (!context) {
@@ -89,6 +112,7 @@ export function useAuth() {
     return context;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useIsEditor() {
     const { role } = useAuth();
     return role === 'admin';

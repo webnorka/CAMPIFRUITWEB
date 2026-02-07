@@ -39,7 +39,8 @@ export default function Footer() {
                         <ul className="space-y-4">
                             <li><Link to="/" className="text-white/60 hover:text-white transition-colors text-sm font-bold">Inicio</Link></li>
                             <li><Link to="/catalogo" className="text-white/60 hover:text-white transition-colors text-sm font-bold">Catálogo</Link></li>
-                            <li><Link to="/admin" className="text-white/60 hover:text-white transition-colors text-sm font-bold">Panel Admin</Link></li>
+                            <li><Link to="/cuenta" className="text-white/60 hover:text-white transition-colors text-sm font-bold">Mi Cuenta</Link></li>
+                            <li><Link to="/favoritos" className="text-white/60 hover:text-white transition-colors text-sm font-bold">Favoritos</Link></li>
                         </ul>
                     </div>
 
@@ -85,8 +86,8 @@ export default function Footer() {
                         &copy; {currentYear} {config.businessName}. Todos los derechos reservados.
                     </p>
                     <div className="flex gap-8">
-                        <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em]">Privacidad</span>
-                        <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em]">Términos</span>
+                        <Link to="/privacidad" className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] hover:text-white/50 transition-colors">Privacidad</Link>
+                        <Link to="/terminos" className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] hover:text-white/50 transition-colors">Términos</Link>
                     </div>
                 </div>
             </div>

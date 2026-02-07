@@ -6,7 +6,7 @@
  * @param {string} notes - Optional order notes
  * @returns {string} WhatsApp URL
  */
-export function generateWhatsAppUrl(config, items, customerName = '', notes = '') {
+export function generateWhatsAppUrl(config, items, customerName = '', notes = '', discountAmount = 0) {
     const { whatsappNumber, defaultCountryPrefix, currencySymbol } = config;
 
     // Build the phone number (remove any non-digit characters except +)
@@ -36,12 +36,19 @@ export function generateWhatsAppUrl(config, items, customerName = '', notes = ''
         message += `\n📝 Notas: ${notes.trim()}\n`;
     }
 
-    // Add total
-    const total = items.reduce((sum, item) => {
+    // Add subtotal + discount + total
+    const subtotal = items.reduce((sum, item) => {
         const currentPrice = item.onSale ? item.offerPrice : item.price;
         return sum + (currentPrice * item.quantity);
     }, 0);
-    message += `\n💰 *Total: ${currencySymbol}${formatNumber(total)}*`;
+
+    if (discountAmount > 0) {
+        message += `\n💰 Subtotal: ${currencySymbol}${formatNumber(subtotal)}`;
+        message += `\n🏷️ Descuento: -${currencySymbol}${formatNumber(discountAmount)}`;
+        message += `\n💰 *Total: ${currencySymbol}${formatNumber(subtotal - discountAmount)}*`;
+    } else {
+        message += `\n💰 *Total: ${currencySymbol}${formatNumber(subtotal)}*`;
+    }
 
     // Encode and build URL
     const encodedMessage = encodeURIComponent(message);
@@ -54,7 +61,7 @@ export function generateWhatsAppUrl(config, items, customerName = '', notes = ''
  * @returns {string} Formatted number
  */
 export function formatNumber(num) {
-    return num.toLocaleString('es-CO');
+    return (num ?? 0).toLocaleString('es-ES');
 }
 
 /**
@@ -63,6 +70,6 @@ export function formatNumber(num) {
  * @param {string} symbol - Currency symbol
  * @returns {string} Formatted price
  */
-export function formatPrice(price, symbol = '$') {
-    return `${symbol}${formatNumber(price)}`;
+export function formatPrice(price, symbol = '') {
+    return `${symbol}${formatNumber(price ?? 0)}`;
 }

@@ -41,6 +41,7 @@ export default function OrdersList() {
         setLoading(false);
     };
 
+    /* eslint-disable react-hooks/set-state-in-effect */
     useEffect(() => {
         fetchOrders();
 
@@ -61,6 +62,7 @@ export default function OrdersList() {
 
         return () => { supabase.removeChannel(channel); };
     }, []);
+    /* eslint-enable react-hooks/set-state-in-effect */
 
     const filteredOrders = useMemo(() => {
         return orders.filter(order => {

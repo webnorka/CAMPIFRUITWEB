@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../utils/supabaseClient';
 
-export default function PromotionsEditor({ setHasUnsavedChanges }) {
+export default function PromotionsEditor() {
     const confirm = useConfirm();
     const toast = useToast();
     const [promotions, setPromotions] = useState([]);
@@ -114,7 +114,7 @@ export default function PromotionsEditor({ setHasUnsavedChanges }) {
             handleCancel();
             setShowSuccess(true);
             setTimeout(() => setShowSuccess(false), 2000);
-        } catch (error) {
+        } catch {
             toast.error('Error al guardar la promoción');
         }
     };

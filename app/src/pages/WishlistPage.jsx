@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, ChevronRight, ShoppingBag, X } from 'lucide-react';
 import { useWishlist } from '../context/WishlistContext';
@@ -10,10 +9,10 @@ import { formatPrice } from '../utils/whatsapp';
 import SEOHead from '../components/SEOHead';
 
 export default function WishlistPage() {
-    const { wishlistIds, toggleWishlist, loading: wishLoading } = useWishlist();
+    const { wishlistIds, toggleWishlist } = useWishlist();
     const { products } = useProducts();
     const { isAuthenticated, loading: authLoading } = useCustomerAuth();
-    const { addItem } = useCart();
+    const { addToCart } = useCart();
     const { config } = useConfig();
 
     const wishlistProducts = products.filter(p => wishlistIds.has(p.id));
@@ -116,7 +115,7 @@ export default function WishlistPage() {
 
                                     <div className="flex gap-2">
                                         <button
-                                            onClick={() => addItem(product)}
+                                            onClick={() => addToCart(product)}
                                             className="flex-1 h-10 bg-forest text-accent rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-forest/90 transition-all flex items-center justify-center gap-2"
                                         >
                                             <ShoppingBag className="w-3.5 h-3.5" />

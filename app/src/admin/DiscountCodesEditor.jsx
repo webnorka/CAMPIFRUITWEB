@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../utils/supabaseClient';
 
-export default function DiscountCodesEditor({ setHasUnsavedChanges }) {
+export default function DiscountCodesEditor() {
     const confirm = useConfirm();
     const toast = useToast();
     const [codes, setCodes] = useState([]);

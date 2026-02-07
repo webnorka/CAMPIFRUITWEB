@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useConfirm } from '../components/ConfirmModal';
 import { useToast } from '../context/ToastContext';
 import {
@@ -111,7 +111,7 @@ export default function ProductEditor({ setHasUnsavedChanges }) {
     const handleBatchUpdate = async () => {
         if (selectedIds.length === 0) return;
 
-        let updates = {};
+        const _updates = {};
         if (batchAction.type === 'discount') {
             const factor = (100 - Number(batchAction.value)) / 100;
             // This is complex because we need to update each product based on its own price

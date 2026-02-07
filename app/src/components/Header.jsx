@@ -1,20 +1,40 @@
-import { ShoppingCart, Menu, X, User } from 'lucide-react';
-import { useState } from 'react';
+import { ShoppingCart, Menu, X, User, Heart, Shield } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useConfig } from '../context/ConfigContext';
 import { useCart } from '../context/CartContext';
 import { useCustomerAuth } from '../context/CustomerAuthContext';
+import { useWishlist } from '../context/WishlistContext';
+import { supabase } from '../utils/supabaseClient';
 import LoginModal from './LoginModal';
 
 export default function Header() {
     const { config } = useConfig();
     const { totalItems, openCart } = useCart();
-    const { isAuthenticated, loading: authLoading } = useCustomerAuth();
+    const { isAuthenticated, user, loading: authLoading } = useCustomerAuth();
+    const { wishlistCount } = useWishlist();
     const [menuOpen, setMenuOpen] = useState(false);
     const [showLogin, setShowLogin] = useState(false);
+    const [isAdminUser, setIsAdminUser] = useState(false);
     const location = useLocation();
 
     const isAdmin = location.pathname.startsWith('/admin');
+
+    // Check if the current user is an admin
+    useEffect(() => {
+        if (!user) {
+            setIsAdminUser(false);
+            return;
+        }
+        supabase
+            .from('admin_users')
+            .select('id')
+            .eq('id', user.id)
+            .single()
+            .then(({ data, error }) => {
+                setIsAdminUser(!error && !!data);
+            });
+    }, [user]);
 
     return (
         <>
@@ -47,6 +67,16 @@ export default function Header() {
                             {!isAdmin && (
                                 <div className="h-6 w-px bg-forest/10 mx-2" />
                             )}
+                            {!isAdmin && isAdminUser && (
+                                <Link
+                                    to="/admin"
+                                    className="p-3 bg-amber-500/10 text-amber-600 rounded-2xl hover:bg-amber-500 hover:text-white transition-all duration-300"
+                                    aria-label="Panel Admin"
+                                    title="Panel Admin"
+                                >
+                                    <Shield className="w-5 h-5" />
+                                </Link>
+                            )}
                             {!isAdmin && !authLoading && (
                                 isAuthenticated ? (
                                     <Link
@@ -66,6 +96,20 @@ export default function Header() {
                                     </button>
                                 )
                             )}
+                            {!isAdmin && isAuthenticated && (
+                                <Link
+                                    to="/favoritos"
+                                    className="relative p-3 bg-forest/5 text-forest rounded-2xl hover:bg-forest hover:text-accent transition-all duration-300"
+                                    aria-label="Favoritos"
+                                >
+                                    <Heart className="w-5 h-5" />
+                                    {wishlistCount > 0 && (
+                                        <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-0.5 bg-accent text-forest text-[8px] font-black rounded-full flex items-center justify-center">
+                                            {wishlistCount}
+                                        </span>
+                                    )}
+                                </Link>
+                            )}
                             {!isAdmin && (
                                 <button
                                     onClick={openCart}
@@ -82,7 +126,21 @@ export default function Header() {
                         </nav>
 
                         {/* Mobile Controls */}
-                        <div className="flex items-center gap-4 md:hidden relative z-10">
+                        <div className="flex items-center gap-3 md:hidden relative z-10">
+                            {!isAdmin && isAuthenticated && (
+                                <Link
+                                    to="/favoritos"
+                                    className="relative p-3 bg-forest/5 text-forest rounded-2xl active:scale-90 transition-transform"
+                                    aria-label="Favoritos"
+                                >
+                                    <Heart className="w-5 h-5" />
+                                    {wishlistCount > 0 && (
+                                        <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-0.5 bg-accent text-forest text-[8px] font-black rounded-full flex items-center justify-center">
+                                            {wishlistCount}
+                                        </span>
+                                    )}
+                                </Link>
+                            )}
                             {!isAdmin && (
                                 <button
                                     onClick={openCart}
@@ -126,14 +184,36 @@ export default function Header() {
                             </Link>
                             {!authLoading && (
                                 isAuthenticated ? (
-                                    <Link
-                                        to="/cuenta"
-                                        onClick={() => setMenuOpen(false)}
-                                        className={`flex items-center justify-between px-8 py-6 rounded-3xl font-black text-sm uppercase tracking-widest transition-all ${location.pathname === '/cuenta' ? 'bg-forest text-accent shadow-xl shadow-forest/20' : 'bg-organic text-forest/60'}`}
-                                    >
-                                        Mi Cuenta
-                                        {location.pathname === '/cuenta' && <div className="w-2 h-2 bg-accent rounded-full animate-pulse" />}
-                                    </Link>
+                                    <>
+                                        {isAdminUser && (
+                                            <Link
+                                                to="/admin"
+                                                onClick={() => setMenuOpen(false)}
+                                                className="flex items-center justify-between px-8 py-6 rounded-3xl font-black text-sm uppercase tracking-widest transition-all bg-amber-50 text-amber-600 border border-amber-200"
+                                            >
+                                                <span className="flex items-center gap-3">
+                                                    <Shield className="w-5 h-5" />
+                                                    Panel Admin
+                                                </span>
+                                            </Link>
+                                        )}
+                                        <Link
+                                            to="/cuenta"
+                                            onClick={() => setMenuOpen(false)}
+                                            className={`flex items-center justify-between px-8 py-6 rounded-3xl font-black text-sm uppercase tracking-widest transition-all ${location.pathname === '/cuenta' ? 'bg-forest text-accent shadow-xl shadow-forest/20' : 'bg-organic text-forest/60'}`}
+                                        >
+                                            Mi Cuenta
+                                            {location.pathname === '/cuenta' && <div className="w-2 h-2 bg-accent rounded-full animate-pulse" />}
+                                        </Link>
+                                        <Link
+                                            to="/favoritos"
+                                            onClick={() => setMenuOpen(false)}
+                                            className={`flex items-center justify-between px-8 py-6 rounded-3xl font-black text-sm uppercase tracking-widest transition-all ${location.pathname === '/favoritos' ? 'bg-forest text-accent shadow-xl shadow-forest/20' : 'bg-organic text-forest/60'}`}
+                                        >
+                                            Favoritos
+                                            {location.pathname === '/favoritos' && <div className="w-2 h-2 bg-accent rounded-full animate-pulse" />}
+                                        </Link>
+                                    </>
                                 ) : (
                                     <button
                                         onClick={() => { setMenuOpen(false); setShowLogin(true); }}

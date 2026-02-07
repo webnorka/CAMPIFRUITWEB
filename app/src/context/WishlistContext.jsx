@@ -6,13 +6,13 @@ import { reportError } from '../hooks/useErrorReporter';
 const WishlistContext = createContext();
 
 export function WishlistProvider({ children }) {
-    const { user, isAuthenticated } = useCustomerAuth();
+    const { customer, isAuthenticated } = useCustomerAuth();
     const [wishlistIds, setWishlistIds] = useState(new Set());
     const [loading, setLoading] = useState(false);
 
-    // Fetch wishlist items for logged-in user
+    // Fetch wishlist items for logged-in user (uses customer.id, not auth user.id)
     const fetchWishlist = useCallback(async () => {
-        if (!user) {
+        if (!customer?.id) {
             setWishlistIds(new Set());
             return;
         }
@@ -21,7 +21,7 @@ export function WishlistProvider({ children }) {
             const { data, error } = await supabase
                 .from('wishlist_items')
                 .select('product_id')
-                .eq('customer_id', user.id);
+                .eq('customer_id', customer.id);
 
             if (error) throw error;
             setWishlistIds(new Set((data || []).map(item => item.product_id)));
@@ -30,14 +30,14 @@ export function WishlistProvider({ children }) {
         } finally {
             setLoading(false);
         }
-    }, [user]);
+    }, [customer?.id]);
 
     useEffect(() => {
         fetchWishlist();
     }, [fetchWishlist]);
 
     const toggleWishlist = useCallback(async (productId) => {
-        if (!isAuthenticated || !user) return false;
+        if (!isAuthenticated || !customer?.id) return false;
 
         const isWishlisted = wishlistIds.has(productId);
 
@@ -46,7 +46,7 @@ export function WishlistProvider({ children }) {
                 const { error } = await supabase
                     .from('wishlist_items')
                     .delete()
-                    .eq('customer_id', user.id)
+                    .eq('customer_id', customer.id)
                     .eq('product_id', productId);
                 if (error) throw error;
 
@@ -58,7 +58,7 @@ export function WishlistProvider({ children }) {
             } else {
                 const { error } = await supabase
                     .from('wishlist_items')
-                    .insert([{ customer_id: user.id, product_id: productId }]);
+                    .insert([{ customer_id: customer.id, product_id: productId }]);
                 if (error) throw error;
 
                 setWishlistIds(prev => new Set([...prev, productId]));
@@ -68,7 +68,7 @@ export function WishlistProvider({ children }) {
             reportError(err, { component: 'WishlistContext', action: 'toggle' });
             return false;
         }
-    }, [isAuthenticated, user, wishlistIds]);
+    }, [isAuthenticated, customer?.id, wishlistIds]);
 
     const isInWishlist = useCallback((productId) => {
         return wishlistIds.has(productId);
@@ -87,6 +87,7 @@ export function WishlistProvider({ children }) {
     );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useWishlist() {
     const context = useContext(WishlistContext);
     if (!context) {

@@ -4,13 +4,11 @@ import { Link } from 'react-router-dom';
 import { useConfig } from '../context/ConfigContext';
 import { useCart } from '../context/CartContext';
 import { formatPrice } from '../utils/whatsapp';
-import ProductQuickView from './ProductQuickView';
 
 export default function ProductCard({ product }) {
     const { config } = useConfig();
     const { addToCart, items } = useCart();
     const [added, setAdded] = useState(false);
-    const [showQuickView, setShowQuickView] = useState(false);
 
     const inCart = items.find(item => item.id === product.id);
     const quantity = inCart?.quantity || 0;
@@ -128,9 +126,6 @@ export default function ProductCard({ product }) {
                     </div>
                 </div>
             </div>
-            {showQuickView && (
-                <ProductQuickView product={product} onClose={() => setShowQuickView(false)} />
-            )}
         </>
     );
 }

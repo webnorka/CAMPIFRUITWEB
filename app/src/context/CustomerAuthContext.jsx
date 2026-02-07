@@ -51,6 +51,16 @@ export function CustomerAuthProvider({ children }) {
     // Listen for auth state changes
     useEffect(() => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            // Auto-recover from stale/expired tokens
+            if (event === 'TOKEN_REFRESHED' && !session) {
+                console.warn('[Auth] Token refresh failed, signing out');
+                await supabase.auth.signOut();
+                setUser(null);
+                setCustomer(null);
+                setLoading(false);
+                return;
+            }
+
             const authUser = session?.user || null;
             setUser(authUser);
 
@@ -62,8 +72,16 @@ export function CustomerAuthProvider({ children }) {
             setLoading(false);
         });
 
-        // Initial session check
-        supabase.auth.getSession().then(({ data: { session } }) => {
+        // Initial session check — handle stale tokens gracefully
+        supabase.auth.getSession().then(async ({ data: { session }, error }) => {
+            if (error) {
+                console.warn('[Auth] Session error, clearing stale state:', error.message);
+                await supabase.auth.signOut();
+                setUser(null);
+                setCustomer(null);
+                setLoading(false);
+                return;
+            }
             const authUser = session?.user || null;
             setUser(authUser);
             if (authUser) {
@@ -133,6 +151,7 @@ export function CustomerAuthProvider({ children }) {
     );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useCustomerAuth() {
     const context = useContext(CustomerAuthContext);
     if (!context) {

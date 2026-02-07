@@ -9,6 +9,20 @@ import { useConfig } from '../context/ConfigContext';
 import { formatPrice } from '../utils/whatsapp';
 import { reportError } from '../hooks/useErrorReporter';
 
+// eslint-disable-next-line no-unused-vars
+const KpiCard = ({ icon: Icon, label, value, sub, color = 'text-forest' }) => (
+    <div className="card-bento p-6 bg-white">
+        <div className="flex items-center gap-3 mb-4">
+            <div className={`w-10 h-10 rounded-2xl bg-organic flex items-center justify-center ${color}`}>
+                <Icon className="w-5 h-5" />
+            </div>
+            <span className="text-[10px] font-black text-forest/30 uppercase tracking-widest">{label}</span>
+        </div>
+        <p className="text-3xl font-display font-black text-forest">{value}</p>
+        {sub && <p className="text-xs text-forest/40 font-bold mt-1">{sub}</p>}
+    </div>
+);
+
 export default function AdminDashboard() {
     const { products } = useProducts();
     const { config } = useConfig();

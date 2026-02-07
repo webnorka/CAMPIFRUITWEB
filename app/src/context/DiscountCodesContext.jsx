@@ -242,6 +242,7 @@ export function DiscountCodesProvider({ children }) {
     );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useDiscountCodes() {
     const context = useContext(DiscountCodesContext);
     if (!context) {

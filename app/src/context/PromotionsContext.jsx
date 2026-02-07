@@ -199,6 +199,7 @@ export function PromotionsProvider({ children }) {
     );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function usePromotions() {
     const context = useContext(PromotionsContext);
     if (!context) {

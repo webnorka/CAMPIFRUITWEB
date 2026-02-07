@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Package, ChevronRight, Clock, CheckCircle2, XCircle, Truck } from 'lucide-react';
-import { supabase } from '../utils/supabaseClient';
 import { useCustomerAuth } from '../context/CustomerAuthContext';
 import { useConfig } from '../context/ConfigContext';
+import { useCustomerOrders } from '../hooks/useCustomerOrders';
 import { formatPrice } from '../utils/whatsapp';
 import SEOHead from '../components/SEOHead';
 
@@ -17,25 +17,8 @@ const statusConfig = {
 export default function OrdersPage() {
     const { customer, isAuthenticated, loading: authLoading } = useCustomerAuth();
     const { config } = useConfig();
-    const [orders, setOrders] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const { orders, loading } = useCustomerOrders(customer?.id);
     const [expanded, setExpanded] = useState(null);
-
-    useEffect(() => {
-        if (!customer?.id) return;
-
-        const fetchOrders = async () => {
-            const { data, error } = await supabase
-                .from('orders')
-                .select('*')
-                .eq('customer_id', customer.id)
-                .order('created_at', { ascending: false });
-
-            if (!error) setOrders(data || []);
-            setLoading(false);
-        };
-        fetchOrders();
-    }, [customer?.id]);
 
     if (authLoading) {
         return (
@@ -140,7 +123,7 @@ export default function OrdersPage() {
                                             <div className="flex items-center gap-3 mb-6">
                                                 {['nuevo', 'procesando', 'entregado'].map((step, i) => {
                                                     const stepConfig = statusConfig[step];
-                                                    const isActive = step === order.status;
+                                                    const _isActive = step === order.status;
                                                     const isPast = ['nuevo', 'procesando', 'entregado'].indexOf(order.status) >= i;
 
                                                     return (

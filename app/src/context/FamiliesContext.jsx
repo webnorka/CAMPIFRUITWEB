@@ -111,6 +111,7 @@ export function FamiliesProvider({ children }) {
     );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useFamilies() {
     const context = useContext(FamiliesContext);
     if (!context) {
