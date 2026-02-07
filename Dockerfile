@@ -3,7 +3,7 @@ FROM node:20-alpine AS build-stage
 WORKDIR /app
 # Note the 'app/' prefix for source files to support root context
 COPY app/package*.json ./
-RUN npm install
+RUN npm install --legacy-peer-deps
 COPY app/ .
 ARG VITE_SUPABASE_URL
 ARG VITE_SUPABASE_ANON_KEY
