@@ -18,6 +18,6 @@ WORKDIR /app
 COPY --from=build-stage /app/dist ./dist
 COPY --from=build-stage /app/server.js ./
 COPY --from=build-stage /app/package*.json ./
-RUN npm install --omit=dev
+RUN npm install --omit=dev --legacy-peer-deps
 EXPOSE 3001
 CMD ["node", "server.js"]
