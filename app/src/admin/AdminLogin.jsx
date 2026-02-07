@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { Lock, AlertCircle } from 'lucide-react';
 import { useAuth } from './AuthProvider';
 import { useConfig } from '../context/ConfigContext';
@@ -15,8 +15,7 @@ export default function AdminLogin() {
 
     // Redirect if already authenticated
     if (isAuthenticated) {
-        navigate('/admin', { replace: true });
-        return null;
+        return <Navigate to="/admin" replace />;
     }
 
     const handleSubmit = async (e) => {
@@ -58,7 +57,7 @@ export default function AdminLogin() {
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                placeholder="admin@campifruit.com"
+                                placeholder="admin@campifrut.com"
                                 className="input-field"
                                 autoFocus
                             />
@@ -89,7 +88,7 @@ export default function AdminLogin() {
                         <button
                             type="submit"
                             disabled={loading || !password || !email}
-                            className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full bg-forest text-white font-bold py-4 px-8 rounded-2xl transition-all duration-300 active:scale-95 shadow-lg hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed text-lg"
                         >
                             {loading ? 'Ingresando...' : 'Ingresar'}
                         </button>

@@ -18,6 +18,7 @@ export default function Hero() {
                     src={config.heroImage || "/hero_premium.png"}
                     alt="Premium Tropical Fruits"
                     className="w-full h-full object-cover scale-105"
+                    loading="eager"
                 />
                 {/* Layered Gradient for Readability: Darker on mobile, elegant on desktop */}
                 <div className="absolute inset-0 bg-gradient-to-b from-forest/80 via-forest/40 to-forest/90 md:bg-gradient-to-r md:from-forest md:via-forest/40 md:to-transparent" />

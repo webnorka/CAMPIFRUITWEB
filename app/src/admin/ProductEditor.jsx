@@ -1,4 +1,6 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useConfirm } from '../components/ConfirmModal';
+import { useToast } from '../context/ToastContext';
 import {
     Plus,
     Trash2,
@@ -16,14 +18,21 @@ import {
     CheckSquare,
     Square,
     Percent,
-    DollarSign
+    DollarSign,
+    GitBranch,
+    ToggleLeft,
+    ToggleRight
 } from 'lucide-react';
 import { useProducts } from '../context/ProductsContext';
 import { useConfig } from '../context/ConfigContext';
+import { useFamilies } from '../context/FamiliesContext';
 import { formatPrice } from '../utils/whatsapp';
 import ImageUpload from '../components/ImageUpload';
+import { supabase } from '../utils/supabaseClient';
 
 export default function ProductEditor({ setHasUnsavedChanges }) {
+    const confirm = useConfirm();
+    const toast = useToast();
     const {
         products,
         addProduct,
@@ -34,6 +43,7 @@ export default function ProductEditor({ setHasUnsavedChanges }) {
         categories
     } = useProducts();
     const { config } = useConfig();
+    const { families } = useFamilies();
 
     // UI State
     const [searchTerm, setSearchTerm] = useState('');
@@ -52,10 +62,18 @@ export default function ProductEditor({ setHasUnsavedChanges }) {
         offerPrice: 0,
         onSale: false,
         category: categories[0] || 'General',
+        familyId: '',
         image: '',
-        weight: ''
+        weight: '',
+        stock: '',
+        sku: '',
+        has_variants: false
     };
     const [formData, setFormData] = useState(emptyProduct);
+    const [variants, setVariants] = useState([]);
+    const [loadingVariants, setLoadingVariants] = useState(false);
+
+    const emptyVariant = { name: '', price: 0, offer_price: 0, stock: '', weight: '', sku: '', active: true, isNew: true };
 
     // Track unsaved changes
     useEffect(() => {
@@ -99,7 +117,7 @@ export default function ProductEditor({ setHasUnsavedChanges }) {
             // This is complex because we need to update each product based on its own price
             // So we use a custom loop or update the context to handle this
             // For now, let's just support fixed values or category changes
-            alert('El descuento por lote se aplicará a los precios actuales.');
+            toast.info('El descuento por lote se aplicará a los precios actuales.');
             products.forEach(p => {
                 if (selectedIds.includes(p.id)) {
                     const newOfferPrice = Math.round(p.price * factor);
@@ -111,7 +129,7 @@ export default function ProductEditor({ setHasUnsavedChanges }) {
         } else if (batchAction.type === 'remove_offers') {
             await batchUpdateProducts(selectedIds, { onSale: false, offerPrice: 0 });
         } else if (batchAction.type === 'delete') {
-            if (window.confirm(`¿Eliminar ${selectedIds.length} productos definitivamente?`)) {
+            if (await confirm(`¿Eliminar ${selectedIds.length} productos definitivamente?`)) {
                 await batchDeleteProducts(selectedIds);
             }
         }
@@ -127,28 +145,75 @@ export default function ProductEditor({ setHasUnsavedChanges }) {
         setEditingId(product.id);
         setFormData({ ...emptyProduct, ...product });
         setIsAdding(false);
+        // Fetch variants for this product
+        if (product.has_variants) {
+            setLoadingVariants(true);
+            supabase.from('product_variants').select('*').eq('product_id', product.id).order('name')
+                .then(({ data }) => { setVariants(data || []); setLoadingVariants(false); })
+                .catch(() => setLoadingVariants(false));
+        } else {
+            setVariants([]);
+        }
     };
 
     const handleAdd = () => {
         setIsAdding(true);
         setEditingId(null);
         setFormData(emptyProduct);
+        setVariants([]);
     };
 
     const handleCancel = () => {
         setIsAdding(false);
         setEditingId(null);
         setFormData(emptyProduct);
+        setVariants([]);
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
+            let productId = editingId;
             if (editingId) {
                 await editProduct(editingId, formData);
             } else {
-                await addProduct(formData);
+                const newProduct = await addProduct(formData);
+                productId = newProduct?.id;
             }
+
+            // Save variants if has_variants is enabled and we have a product ID
+            if (formData.has_variants && productId) {
+                // Delete removed variants (compare DB vs current)
+                const currentIds = variants.filter(v => !v.isNew && v.id).map(v => v.id);
+                if (editingId) {
+                    const { data: existingVariants } = await supabase.from('product_variants').select('id').eq('product_id', productId);
+                    const existingIds = (existingVariants || []).map(v => v.id);
+                    const deletedIds = existingIds.filter(id => !currentIds.includes(id));
+                    if (deletedIds.length > 0) {
+                        await supabase.from('product_variants').delete().in('id', deletedIds);
+                    }
+                }
+
+                // Upsert remaining variants
+                for (const v of variants) {
+                    const variantData = {
+                        product_id: productId,
+                        name: v.name,
+                        price: Number(v.price) || 0,
+                        offer_price: Number(v.offer_price) || 0,
+                        stock: v.stock !== '' ? Number(v.stock) : null,
+                        weight: v.weight || null,
+                        sku: v.sku || null,
+                        active: v.active !== false
+                    };
+                    if (v.isNew) {
+                        await supabase.from('product_variants').insert(variantData);
+                    } else if (v.id) {
+                        await supabase.from('product_variants').update(variantData).eq('id', v.id);
+                    }
+                }
+            }
+
             setSaved(true);
             setTimeout(() => {
                 setSaved(false);
@@ -156,12 +221,12 @@ export default function ProductEditor({ setHasUnsavedChanges }) {
             }, 1500);
         } catch (error) {
             console.error('Detailed Error:', error);
-            alert(`Error al guardar: ${error.message || 'Consulta la consola para más detalles'}`);
+            toast.error(`Error al guardar: ${error.message || 'Consulta la consola para más detalles'}`);
         }
     };
 
     const handleDelete = async (id) => {
-        if (window.confirm('¿Estás seguro de que quieres eliminar este producto?')) {
+        if (await confirm('¿Estás seguro de que quieres eliminar este producto?')) {
             try {
                 await deleteProduct(id);
                 // If we were editing this product, close the editor
@@ -170,7 +235,7 @@ export default function ProductEditor({ setHasUnsavedChanges }) {
                 }
             } catch (error) {
                 console.error('Error deleting product:', error);
-                alert('Error al eliminar el producto');
+                toast.error('Error al eliminar el producto');
             }
         }
     };
@@ -361,6 +426,22 @@ export default function ProductEditor({ setHasUnsavedChanges }) {
 
                                         <div className="grid grid-cols-2 gap-6">
                                             <div>
+                                                <label className="text-[10px] font-black text-forest/40 uppercase tracking-[0.3em] ml-1">Familia</label>
+                                                <div className="relative mt-3">
+                                                    <select
+                                                        value={formData.familyId || ''}
+                                                        onChange={(e) => setFormData({ ...formData, familyId: e.target.value || null })}
+                                                        className="input-field pr-12 bg-white appearance-none"
+                                                    >
+                                                        <option value="">Sin familia</option>
+                                                        {families.filter(f => f.active).map(f => (
+                                                            <option key={f.id} value={f.id}>{f.name}</option>
+                                                        ))}
+                                                    </select>
+                                                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-forest/20 pointer-events-none" />
+                                                </div>
+                                            </div>
+                                            <div>
                                                 <label className="text-[10px] font-black text-forest/40 uppercase tracking-[0.3em] ml-1">Categoría</label>
                                                 <div className="relative mt-3">
                                                     <select
@@ -385,6 +466,8 @@ export default function ProductEditor({ setHasUnsavedChanges }) {
                                                     <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-forest/20 pointer-events-none" />
                                                 </div>
                                             </div>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-6">
                                             <div>
                                                 <label className="text-[10px] font-black text-forest/40 uppercase tracking-[0.3em] ml-1">Unidad/Medida</label>
                                                 <input
@@ -392,6 +475,27 @@ export default function ProductEditor({ setHasUnsavedChanges }) {
                                                     placeholder="Ej: 500g"
                                                     value={formData.weight}
                                                     onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+                                                    className="input-field mt-3 bg-white"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] font-black text-forest/40 uppercase tracking-[0.3em] ml-1">Stock</label>
+                                                <input
+                                                    type="number"
+                                                    placeholder="Ej: 100"
+                                                    value={formData.stock}
+                                                    onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+                                                    className="input-field mt-3 bg-white"
+                                                    min="0"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] font-black text-forest/40 uppercase tracking-[0.3em] ml-1">SKU</label>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Ej: PROD-001"
+                                                    value={formData.sku}
+                                                    onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
                                                     className="input-field mt-3 bg-white"
                                                 />
                                             </div>
@@ -492,6 +596,138 @@ export default function ProductEditor({ setHasUnsavedChanges }) {
                                             className="input-field mt-3 resize-none font-medium text-forest/60 bg-white py-5"
                                             placeholder="Detalles sobre origen, maduración o beneficios..."
                                         />
+                                    </div>
+
+                                    {/* Variants Section */}
+                                    <div className="mt-8 pt-8 border-t border-gray-100">
+                                        <div className="flex items-center justify-between mb-6">
+                                            <div className="flex items-center gap-3">
+                                                <GitBranch className="w-5 h-5 text-primary-500" />
+                                                <span className="text-sm font-black text-forest">Variantes</span>
+                                            </div>
+                                            <div
+                                                onClick={() => {
+                                                    setFormData({ ...formData, has_variants: !formData.has_variants });
+                                                    if (!formData.has_variants && variants.length === 0) {
+                                                        setVariants([{ ...emptyVariant }]);
+                                                    }
+                                                }}
+                                                className="cursor-pointer"
+                                            >
+                                                {formData.has_variants
+                                                    ? <ToggleRight className="w-10 h-6 text-primary-500" />
+                                                    : <ToggleLeft className="w-10 h-6 text-forest/20" />
+                                                }
+                                            </div>
+                                        </div>
+
+                                        {formData.has_variants && (
+                                            <div className="space-y-4 animate-fade-in">
+                                                {loadingVariants ? (
+                                                    <div className="text-center py-4">
+                                                        <div className="w-6 h-6 border-2 border-forest/10 border-t-forest rounded-full animate-spin mx-auto" />
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        {variants.map((v, idx) => (
+                                                            <div key={v.id || `new-${idx}`} className="bg-white p-5 rounded-3xl border border-gray-100 space-y-4">
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="text-[10px] font-black text-forest/30 uppercase tracking-widest">Variante {idx + 1}</span>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setVariants(variants.filter((_, i) => i !== idx))}
+                                                                        className="p-1.5 text-rose-300 hover:text-rose-500 rounded-lg transition-colors"
+                                                                    >
+                                                                        <Trash2 className="w-4 h-4" />
+                                                                    </button>
+                                                                </div>
+                                                                <div className="grid grid-cols-2 gap-3">
+                                                                    <div>
+                                                                        <label className="text-[9px] font-black text-forest/30 uppercase tracking-widest">Nombre</label>
+                                                                        <input
+                                                                            type="text"
+                                                                            value={v.name}
+                                                                            onChange={(e) => {
+                                                                                const upd = [...variants];
+                                                                                upd[idx] = { ...upd[idx], name: e.target.value };
+                                                                                setVariants(upd);
+                                                                            }}
+                                                                            className="input-field mt-1 text-sm"
+                                                                            placeholder="Ej: 500g"
+                                                                        />
+                                                                    </div>
+                                                                    <div>
+                                                                        <label className="text-[9px] font-black text-forest/30 uppercase tracking-widest">Precio</label>
+                                                                        <input
+                                                                            type="number"
+                                                                            value={v.price === 0 ? '' : v.price}
+                                                                            onChange={(e) => {
+                                                                                const upd = [...variants];
+                                                                                upd[idx] = { ...upd[idx], price: e.target.value === '' ? 0 : Number(e.target.value) };
+                                                                                setVariants(upd);
+                                                                            }}
+                                                                            className="input-field mt-1 text-sm"
+                                                                            placeholder="0"
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                                <div className="grid grid-cols-3 gap-3">
+                                                                    <div>
+                                                                        <label className="text-[9px] font-black text-forest/30 uppercase tracking-widest">Stock</label>
+                                                                        <input
+                                                                            type="number"
+                                                                            value={v.stock}
+                                                                            onChange={(e) => {
+                                                                                const upd = [...variants];
+                                                                                upd[idx] = { ...upd[idx], stock: e.target.value };
+                                                                                setVariants(upd);
+                                                                            }}
+                                                                            className="input-field mt-1 text-sm"
+                                                                            placeholder="∞"
+                                                                        />
+                                                                    </div>
+                                                                    <div>
+                                                                        <label className="text-[9px] font-black text-forest/30 uppercase tracking-widest">Peso</label>
+                                                                        <input
+                                                                            type="text"
+                                                                            value={v.weight || ''}
+                                                                            onChange={(e) => {
+                                                                                const upd = [...variants];
+                                                                                upd[idx] = { ...upd[idx], weight: e.target.value };
+                                                                                setVariants(upd);
+                                                                            }}
+                                                                            className="input-field mt-1 text-sm"
+                                                                            placeholder="Ej: 1kg"
+                                                                        />
+                                                                    </div>
+                                                                    <div>
+                                                                        <label className="text-[9px] font-black text-forest/30 uppercase tracking-widest">SKU</label>
+                                                                        <input
+                                                                            type="text"
+                                                                            value={v.sku || ''}
+                                                                            onChange={(e) => {
+                                                                                const upd = [...variants];
+                                                                                upd[idx] = { ...upd[idx], sku: e.target.value };
+                                                                                setVariants(upd);
+                                                                            }}
+                                                                            className="input-field mt-1 text-sm"
+                                                                            placeholder="VAR-001"
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setVariants([...variants, { ...emptyVariant }])}
+                                                            className="w-full h-12 border-2 border-dashed border-forest/10 rounded-2xl text-forest/30 font-black text-xs uppercase tracking-widest hover:border-primary-300 hover:text-primary-500 transition-colors flex items-center justify-center gap-2"
+                                                        >
+                                                            <Plus className="w-4 h-4" /> Añadir Variante
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>

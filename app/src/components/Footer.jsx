@@ -15,7 +15,7 @@ export default function Footer() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-16 mb-20">
                     {/* Brand Section */}
                     <div className="space-y-8">
-                        <img src="/logo_text.png" alt={config.businessName} className="h-12 w-auto brightness-0 invert" />
+                        <img src="/logo_text.png" alt={config.businessName} className="h-12 w-auto brightness-0 invert" loading="lazy" />
                         <p className="text-white/50 text-sm leading-relaxed max-w-xs font-medium">
                             {config.footerDescription || "Llevamos la esencia vibrante del campo directo a tu puerta. Calidad premium, cosecha seleccionada y compromiso con lo local."}
                         </p>

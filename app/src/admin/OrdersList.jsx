@@ -11,7 +11,11 @@ import {
     Calendar,
     User,
     DollarSign,
-    ShoppingBag
+    ShoppingBag,
+    CreditCard,
+    MessageCircle,
+    MapPin,
+    ExternalLink
 } from 'lucide-react';
 import { supabase } from '../utils/supabaseClient';
 import { formatPrice } from '../utils/whatsapp';
@@ -39,6 +43,23 @@ export default function OrdersList() {
 
     useEffect(() => {
         fetchOrders();
+
+        // B4: Realtime subscription for new/updated orders
+        const channel = supabase
+            .channel('orders-realtime')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => {
+                setOrders(prev => [payload.new, ...prev]);
+            })
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' }, (payload) => {
+                setOrders(prev => prev.map(o => o.id === payload.new.id ? payload.new : o));
+                setSelectedOrder(prev => prev?.id === payload.new.id ? payload.new : prev);
+            })
+            .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'orders' }, (payload) => {
+                setOrders(prev => prev.filter(o => o.id !== payload.old.id));
+            })
+            .subscribe();
+
+        return () => { supabase.removeChannel(channel); };
     }, []);
 
     const filteredOrders = useMemo(() => {
@@ -64,20 +85,28 @@ export default function OrdersList() {
         }
     };
 
+    const escapeCSV = (val) => {
+        const str = String(val ?? '');
+        if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+            return `"${str.replace(/"/g, '""')}"`;
+        }
+        return str;
+    };
+
     const exportToCSV = () => {
         const headers = ["ID", "Fecha", "Cliente", "Total", "Estado", "Productos", "Notas"];
         const rows = filteredOrders.map(o => [
-            o.id,
-            new Date(o.created_at).toLocaleString(),
-            o.customer_name,
-            o.total_price,
-            o.status,
-            o.items.map(i => `${i.quantity}x ${i.name}`).join('; '),
-            o.notes || ''
+            escapeCSV(o.id),
+            escapeCSV(new Date(o.created_at).toLocaleString()),
+            escapeCSV(o.customer_name),
+            escapeCSV(o.total_price),
+            escapeCSV(o.status),
+            escapeCSV(o.items.map(i => `${i.quantity}x ${i.name}`).join('; ')),
+            escapeCSV(o.notes || '')
         ]);
 
-        const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const csvContent = [headers.map(escapeCSV), ...rows].map(e => e.join(",")).join("\n");
+        const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
         const url = URL.createObjectURL(blob);
         link.setAttribute("href", url);
@@ -96,6 +125,15 @@ export default function OrdersList() {
             case 'cancelado': return 'bg-rose-50 text-rose-600 border-rose-100';
             default: return 'bg-gray-50 text-gray-600 border-gray-100';
         }
+    };
+
+    const getPaymentBadge = (order) => {
+        const ps = order.payment_status;
+        if (ps === 'paid') return { label: 'Pagado', style: 'bg-emerald-50 text-emerald-600 border-emerald-100', icon: CheckCircle2 };
+        if (ps === 'pending') return { label: 'Pendiente', style: 'bg-amber-50 text-amber-600 border-amber-100', icon: Clock };
+        if (ps === 'failed' || ps === 'expired') return { label: 'Fallido', style: 'bg-rose-50 text-rose-600 border-rose-100', icon: XCircle };
+        if (order.payment_method === 'stripe') return { label: 'Stripe', style: 'bg-indigo-50 text-indigo-600 border-indigo-100', icon: CreditCard };
+        return { label: 'WhatsApp', style: 'bg-gray-50 text-gray-500 border-gray-100', icon: MessageCircle };
     };
 
     return (
@@ -173,6 +211,7 @@ export default function OrdersList() {
                                     <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-forest/40">Cliente</th>
                                     <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-forest/40">Fecha</th>
                                     <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-forest/40">Total</th>
+                                    <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-forest/40">Pago</th>
                                     <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-forest/40">Estado</th>
                                     <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-forest/40 text-right">Acciones</th>
                                 </tr>
@@ -202,6 +241,18 @@ export default function OrdersList() {
                                             <span className="text-lg font-black text-forest">
                                                 {formatPrice(order.total_price, config.currencySymbol)}
                                             </span>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            {(() => {
+                                                const badge = getPaymentBadge(order);
+                                                const Icon = badge.icon;
+                                                return (
+                                                    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${badge.style}`}>
+                                                        <Icon className="w-3 h-3" />
+                                                        {badge.label}
+                                                    </span>
+                                                );
+                                            })()}
                                         </td>
                                         <td className="px-8 py-6">
                                             <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${getStatusStyles(order.status)}`}>
@@ -290,6 +341,48 @@ export default function OrdersList() {
                                     </div>
                                 </div>
                             )}
+
+                            {/* Payment & Shipping Info */}
+                            <div className="grid grid-cols-2 gap-4 mb-10">
+                                <div className="p-4 bg-organic rounded-2xl border border-forest/5">
+                                    <p className="text-[10px] font-black text-forest/30 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                                        <CreditCard className="w-3 h-3" />Método de Pago
+                                    </p>
+                                    {(() => {
+                                        const badge = getPaymentBadge(selectedOrder);
+                                        const Icon = badge.icon;
+                                        return (
+                                            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${badge.style}`}>
+                                                <Icon className="w-3 h-3" />{badge.label}
+                                            </span>
+                                        );
+                                    })()}
+                                    {selectedOrder.stripe_payment_id && (
+                                        <a
+                                            href={`https://dashboard.stripe.com/payments/${selectedOrder.stripe_payment_id}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="mt-2 flex items-center gap-1 text-[10px] text-indigo-500 font-bold hover:underline"
+                                        >
+                                            <ExternalLink className="w-3 h-3" />
+                                            Ver en Stripe
+                                        </a>
+                                    )}
+                                </div>
+                                {selectedOrder.shipping_address && (
+                                    <div className="p-4 bg-organic rounded-2xl border border-forest/5">
+                                        <p className="text-[10px] font-black text-forest/30 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                                            <MapPin className="w-3 h-3" />Dirección de Envío
+                                        </p>
+                                        <p className="text-xs font-bold text-forest">
+                                            {selectedOrder.shipping_address.label || selectedOrder.shipping_address.street}
+                                        </p>
+                                        <p className="text-[10px] text-forest/50">
+                                            {[selectedOrder.shipping_address.city, selectedOrder.shipping_address.postal_code, selectedOrder.shipping_address.province].filter(Boolean).join(', ')}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
 
                             <div className="flex gap-4">
                                 <button

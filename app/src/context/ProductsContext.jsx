@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
+import { reportError } from '../hooks/useErrorReporter';
 
 const ProductsContext = createContext();
 
@@ -20,12 +21,14 @@ export function ProductsProvider({ children }) {
             const normalizedData = (data || []).map(p => ({
                 ...p,
                 offerPrice: p.offer_price,
-                onSale: p.on_sale
+                onSale: p.on_sale,
+                familyId: p.family_id,
+                slug: p.slug || p.id
             }));
 
             setProducts(normalizedData);
         } catch (err) {
-            console.error('Error fetching products:', err);
+            reportError(err, { component: 'ProductsContext', action: 'fetchProducts' });
         } finally {
             setLoading(false);
         }
@@ -45,8 +48,12 @@ export function ProductsProvider({ children }) {
             offer_price: Number(product.offerPrice) || 0,
             on_sale: !!product.onSale,
             category: product.category,
+            family_id: product.familyId || null,
             image: product.image,
-            weight: product.weight
+            weight: product.weight,
+            stock: product.stock ? Number(product.stock) : null,
+            sku: product.sku || null,
+            has_variants: !!product.has_variants
         };
 
         const { data, error } = await supabase
@@ -55,10 +62,11 @@ export function ProductsProvider({ children }) {
             .select();
 
         if (error) {
-            console.error('Error adding product:', error);
+            reportError(error, { component: 'ProductsContext', action: 'addProduct' });
             throw error;
         }
         setProducts(prev => [data[0], ...prev]);
+        return data[0];
     };
 
     const editProduct = async (id, updatedProduct) => {
@@ -73,6 +81,13 @@ export function ProductsProvider({ children }) {
             productToUpdate.offer_price = productToUpdate.offerPrice;
             delete productToUpdate.offerPrice;
         }
+        if ('familyId' in productToUpdate) {
+            productToUpdate.family_id = productToUpdate.familyId || null;
+            delete productToUpdate.familyId;
+        }
+        if ('stock' in productToUpdate) {
+            productToUpdate.stock = productToUpdate.stock ? Number(productToUpdate.stock) : null;
+        }
 
         const { error } = await supabase
             .from('products')
@@ -80,7 +95,7 @@ export function ProductsProvider({ children }) {
             .eq('id', id);
 
         if (error) {
-            console.error('Error updating product:', error);
+            reportError(error, { component: 'ProductsContext', action: 'editProduct', meta: { id } });
             throw error;
         }
         setProducts(prev => prev.map(p => p.id === id ? { ...p, ...updatedProduct } : p));
@@ -93,7 +108,7 @@ export function ProductsProvider({ children }) {
             .eq('id', id);
 
         if (error) {
-            console.error('Error deleting product:', error);
+            reportError(error, { component: 'ProductsContext', action: 'deleteProduct', meta: { id } });
             throw error;
         }
         setProducts(prev => prev.filter(p => p.id !== id));
@@ -117,7 +132,7 @@ export function ProductsProvider({ children }) {
             .in('id', ids);
 
         if (error) {
-            console.error('Error batch updating:', error);
+            reportError(error, { component: 'ProductsContext', action: 'batchUpdate', meta: { count: ids.length } });
             throw error;
         }
         setProducts(prev => prev.map(p => ids.includes(p.id) ? { ...p, ...updates } : p));
@@ -130,7 +145,7 @@ export function ProductsProvider({ children }) {
             .in('id', ids);
 
         if (error) {
-            console.error('Error batch deleting:', error);
+            reportError(error, { component: 'ProductsContext', action: 'batchDelete', meta: { count: ids.length } });
             throw error;
         }
         setProducts(prev => prev.filter(p => !ids.includes(p.id)));

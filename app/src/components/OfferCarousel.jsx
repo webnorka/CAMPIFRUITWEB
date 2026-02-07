@@ -1,56 +1,98 @@
-import { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight, Tag } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { ChevronLeft, ChevronRight, Tag, ArrowRight } from 'lucide-react';
 import { useConfig } from '../context/ConfigContext';
 import { useProducts } from '../context/ProductsContext';
+import { useCarousel } from '../context/CarouselContext';
+import { useCart } from '../context/CartContext';
 
 export default function OfferCarousel() {
     const { config } = useConfig();
     const { products } = useProducts();
+    const { activeSlides } = useCarousel();
+    const { addToCart } = useCart();
     const [currentIndex, setCurrentIndex] = useState(0);
     const timeoutRef = useRef(null);
+    const touchStartX = useRef(null);
 
-    const offers = products.filter(p => p.onSale);
+    // Merge carousel_slides with product data; fallback to on-sale products if no admin slides
+    const slides = (activeSlides.length > 0)
+        ? activeSlides.map(slide => {
+            if (slide.type === 'product' && slide.productId) {
+                const product = products.find(p => p.id === slide.productId);
+                return { ...slide, product };
+            }
+            return slide;
+        })
+        : products.filter(p => p.onSale).map(p => ({
+            id: p.id,
+            type: 'product',
+            title: p.name,
+            imageUrl: p.image,
+            product: p
+        }));
 
-    const resetTimeout = () => {
-        if (timeoutRef.current) {
-            clearTimeout(timeoutRef.current);
-        }
-    };
+    const resetTimeout = useCallback(() => {
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    }, []);
 
     useEffect(() => {
-        if (!config.showCarousel || offers.length === 0) return;
-
+        if (!config.showCarousel || slides.length === 0) return;
         resetTimeout();
         timeoutRef.current = setTimeout(
-            () => setCurrentIndex((prevIndex) => (prevIndex === offers.length - 1 ? 0 : prevIndex + 1)),
+            () => setCurrentIndex(prev => (prev >= slides.length - 1 ? 0 : prev + 1)),
             config.carouselSpeed || 3000
         );
+        return resetTimeout;
+    }, [currentIndex, slides.length, config.showCarousel, config.carouselSpeed, resetTimeout]);
 
-        return () => resetTimeout();
-    }, [currentIndex, offers.length, config.showCarousel, config.carouselSpeed]);
+    // Reset index if slides change
+    useEffect(() => {
+        if (currentIndex >= slides.length) setCurrentIndex(0);
+    }, [slides.length, currentIndex]);
 
-    if (!config.showCarousel || offers.length === 0) return null;
+    if (!config.showCarousel || slides.length === 0) return null;
 
-    const nextSlide = () => setCurrentIndex(prev => (prev === offers.length - 1 ? 0 : prev + 1));
-    const prevSlide = () => setCurrentIndex(prev => (prev === 0 ? offers.length - 1 : prev - 1));
+    const nextSlide = () => setCurrentIndex(prev => (prev >= slides.length - 1 ? 0 : prev + 1));
+    const prevSlide = () => setCurrentIndex(prev => (prev <= 0 ? slides.length - 1 : prev - 1));
+
+    // Touch swipe support (C3)
+    const handleTouchStart = (e) => { touchStartX.current = e.touches[0].clientX; };
+    const handleTouchEnd = (e) => {
+        if (touchStartX.current === null) return;
+        const diff = touchStartX.current - e.changedTouches[0].clientX;
+        if (Math.abs(diff) > 50) diff > 0 ? nextSlide() : prevSlide();
+        touchStartX.current = null;
+    };
+
+    const handleAddToCart = (product) => {
+        if (product) addToCart(product);
+    };
 
     return (
-        <div className="relative w-full mb-20 group overflow-hidden rounded-[2.5rem] bg-forest/5 p-2 border border-forest/5 shadow-inner">
+        <div
+            className="relative w-full mb-20 group overflow-hidden rounded-[2.5rem] bg-forest/5 p-2 border border-forest/5 shadow-inner"
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+        >
             <div className="relative h-[400px] md:h-[500px] w-full overflow-hidden rounded-[2.3rem]">
-                {offers.map((product, index) => {
-                    const discount = product.price > 0 ? Math.round((1 - (product.offerPrice / product.price)) * 100) : 0;
+                {slides.map((slide, index) => {
+                    const product = slide.product;
+                    const discount = product && product.price > 0
+                        ? Math.round((1 - ((product.offerPrice || product.offer_price || product.price) / product.price)) * 100)
+                        : 0;
+                    const imageUrl = slide.imageUrl || product?.image || '/placeholder-product.jpg';
 
                     return (
                         <div
-                            key={product.id}
-                            className={`absolute inset-0 transition-all duration-1000 ease-in-out transform ${index === currentIndex ? 'opacity-100 translate-x-0 scale-100' : 'opacity-0 translate-x-full scale-105 pointer-events-none'
-                                }`}
+                            key={slide.id}
+                            className={`absolute inset-0 transition-all duration-1000 ease-in-out transform ${index === currentIndex ? 'opacity-100 translate-x-0 scale-100' : 'opacity-0 translate-x-full scale-105 pointer-events-none'}`}
                         >
                             {/* Background Image */}
                             <img
-                                src={product.image || '/placeholder-product.jpg'}
-                                alt={product.name}
+                                src={imageUrl}
+                                alt={slide.title || product?.name || 'Slide'}
                                 className="w-full h-full object-cover"
+                                loading="lazy"
                             />
 
                             {/* Glass Overlay */}
@@ -59,29 +101,48 @@ export default function OfferCarousel() {
                             {/* Floating Content */}
                             <div className="absolute bottom-0 left-0 right-0 p-8 md:p-12 text-white">
                                 <div className="flex items-center gap-3 mb-4">
-                                    <div className="offer-tag flex items-center gap-2 bg-accent text-forest font-black px-4 py-2 rounded-xl text-xs uppercase tracking-widest shadow-xl animate-bounce-short">
-                                        <Tag className="w-4 h-4" />
-                                        -{discount}% OFF
-                                    </div>
+                                    {slide.type === 'product' && product && discount > 0 && (
+                                        <div className="offer-tag flex items-center gap-2 bg-accent text-forest font-black px-4 py-2 rounded-xl text-xs uppercase tracking-widest shadow-xl animate-bounce-short">
+                                            <Tag className="w-4 h-4" />
+                                            -{discount}% OFF
+                                        </div>
+                                    )}
                                     <span className="bg-white/10 backdrop-blur-md text-white/80 border border-white/10 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest">
-                                        Oferta Destacada
+                                        {slide.type === 'product' ? 'Oferta Destacada' : (slide.subtitle || 'Destacado')}
                                     </span>
                                 </div>
 
                                 <h3 className="text-4xl md:text-6xl font-display font-black mb-4 tracking-tighter drop-shadow-lg">
-                                    {product.name}
+                                    {slide.title || product?.name}
                                 </h3>
 
                                 <div className="flex items-center gap-4">
-                                    <p className="text-2xl md:text-3xl font-black text-accent">
-                                        {config.currencySymbol}{product.offerPrice.toLocaleString()}
-                                    </p>
-                                    <p className="text-lg md:text-xl font-bold text-white/40 line-through">
-                                        {config.currencySymbol}{product.price.toLocaleString()}
-                                    </p>
-                                    <button className="hidden md:flex ml-auto btn-primary h-14 px-8 text-xs uppercase tracking-widest">
-                                        Añadir al carrito
-                                    </button>
+                                    {slide.type === 'product' && product ? (
+                                        <>
+                                            <p className="text-2xl md:text-3xl font-black text-accent">
+                                                {config.currencySymbol}{(product.offerPrice || product.offer_price || product.price).toLocaleString()}
+                                            </p>
+                                            {product.onSale && (
+                                                <p className="text-lg md:text-xl font-bold text-white/40 line-through">
+                                                    {config.currencySymbol}{product.price.toLocaleString()}
+                                                </p>
+                                            )}
+                                            <button
+                                                onClick={() => handleAddToCart(product)}
+                                                className="hidden md:flex ml-auto btn-primary h-14 px-8 text-xs uppercase tracking-widest"
+                                            >
+                                                Añadir al carrito
+                                            </button>
+                                        </>
+                                    ) : slide.ctaUrl ? (
+                                        <a
+                                            href={slide.ctaUrl}
+                                            className="flex items-center gap-3 btn-primary h-14 px-8 text-xs uppercase tracking-widest"
+                                        >
+                                            {slide.ctaText || 'Ver más'}
+                                            <ArrowRight className="w-4 h-4" />
+                                        </a>
+                                    ) : null}
                                 </div>
                             </div>
                         </div>
@@ -90,17 +151,19 @@ export default function OfferCarousel() {
             </div>
 
             {/* Navigation Controls */}
-            {offers.length > 1 && (
+            {slides.length > 1 && (
                 <>
                     <button
                         onClick={prevSlide}
                         className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 w-12 h-12 md:w-16 md:h-16 rounded-full bg-forest text-accent border border-white/10 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center hover:bg-accent hover:text-forest shadow-2xl z-30"
+                        aria-label="Slide anterior"
                     >
                         <ChevronLeft className="w-6 h-6 md:w-8 md:h-8" />
                     </button>
                     <button
                         onClick={nextSlide}
                         className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 w-12 h-12 md:w-16 md:h-16 rounded-full bg-forest text-accent border border-white/10 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center hover:bg-accent hover:text-forest shadow-2xl z-30"
+                        aria-label="Siguiente slide"
                     >
                         <ChevronRight className="w-6 h-6 md:w-8 md:h-8" />
                     </button>
@@ -109,12 +172,12 @@ export default function OfferCarousel() {
 
             {/* Indicators */}
             <div className="absolute top-8 left-1/2 -translate-x-1/2 flex gap-3 z-30">
-                {offers.map((_, index) => (
+                {slides.map((_, index) => (
                     <button
                         key={index}
                         onClick={() => setCurrentIndex(index)}
-                        className={`transition-all duration-500 rounded-full h-2 ${index === currentIndex ? 'w-12 bg-accent shadow-[0_0_15px_rgba(163,230,53,0.5)]' : 'w-2 bg-white/40 hover:bg-white/60'
-                            }`}
+                        aria-label={`Ir a slide ${index + 1}`}
+                        className={`transition-all duration-500 rounded-full h-2 ${index === currentIndex ? 'w-12 bg-accent shadow-[0_0_15px_rgba(163,230,53,0.5)]' : 'w-2 bg-white/40 hover:bg-white/60'}`}
                     />
                 ))}
             </div>

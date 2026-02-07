@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
+import { reportError } from '../hooks/useErrorReporter';
 
 const ConfigContext = createContext();
 
@@ -19,6 +20,9 @@ export function ConfigProvider({ children }) {
         primaryColor: "#1A2F1A",
         secondaryColor: "#FAF9F6",
         headerTextColor: "#1A2F1A",
+        enableOnlinePayments: false,
+        enableWhatsappCheckout: true,
+        stripePublishableKey: "",
         loading: true
     });
 
@@ -51,6 +55,9 @@ export function ConfigProvider({ children }) {
                     primaryColor: data.primary_color || "#1A2F1A",
                     secondaryColor: data.secondary_color || "#FAF9F6",
                     headerTextColor: data.header_text_color || "#1A2F1A",
+                    enableOnlinePayments: data.enable_online_payments ?? false,
+                    enableWhatsappCheckout: data.enable_whatsapp_checkout ?? true,
+                    stripePublishableKey: data.stripe_publishable_key || "",
                     loading: false
                 });
             } else {
@@ -58,7 +65,7 @@ export function ConfigProvider({ children }) {
                 setConfig(prev => ({ ...prev, loading: false }));
             }
         } catch (err) {
-            console.error('Error fetching config:', err);
+            reportError(err, { component: 'ConfigContext', action: 'fetchConfig' });
             setConfig(prev => ({ ...prev, loading: false }));
         }
     };
@@ -86,7 +93,10 @@ export function ConfigProvider({ children }) {
             accent_color: newConfig.accentColor,
             primary_color: newConfig.primaryColor,
             secondary_color: newConfig.secondaryColor,
-            header_text_color: newConfig.headerTextColor
+            header_text_color: newConfig.headerTextColor,
+            enable_online_payments: newConfig.enableOnlinePayments,
+            enable_whatsapp_checkout: newConfig.enableWhatsappCheckout,
+            stripe_publishable_key: newConfig.stripePublishableKey
         };
 
         // Optimistic update
@@ -110,13 +120,18 @@ export function ConfigProvider({ children }) {
         }
 
         if (error) {
-            console.error('Error saving config:', error);
+            reportError(error, { component: 'ConfigContext', action: 'updateConfig' });
             // Revert?
         }
     };
 
+    const resetConfig = async () => {
+        setConfig(prev => ({ ...prev, loading: true }));
+        await fetchConfig();
+    };
+
     return (
-        <ConfigContext.Provider value={{ config, updateConfig }}>
+        <ConfigContext.Provider value={{ config, updateConfig, resetConfig }}>
             {children}
         </ConfigContext.Provider>
     );

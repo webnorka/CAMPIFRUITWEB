@@ -1,80 +1,71 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { ConfigProvider, useConfig } from './context/ConfigContext';
+import { lazy, Suspense } from 'react';
+import { HelmetProvider } from 'react-helmet-async';
+import { ConfigProvider } from './context/ConfigContext';
 import { ProductsProvider } from './context/ProductsContext';
 import { CartProvider } from './context/CartContext';
-import { AuthProvider, ProtectedRoute } from './admin/AuthProvider';
+import { FamiliesProvider } from './context/FamiliesContext';
+import { CarouselProvider } from './context/CarouselContext';
+import { CustomerAuthProvider } from './context/CustomerAuthContext';
+import { WishlistProvider } from './context/WishlistContext';
+import { ToastProvider } from './context/ToastContext';
+import Toast from './components/Toast';
 
-import Header from './components/Header';
-import Footer from './components/Footer';
-import CartModal from './components/CartModal';
-import HomePage from './pages/HomePage';
-import CatalogPage from './pages/CatalogPage';
+import PublicApp from './public/PublicApp';
 import AdminLogin from './admin/AdminLogin';
-import AdminPanel from './admin/AdminPanel';
+import { AuthProvider } from './admin/AuthProvider';
 
-function AppContent() {
-  const { config } = useConfig();
+// Lazy load the entire admin app (with its own providers)
+const AdminApp = lazy(() => import('./admin/AdminApp'));
 
+function AdminLoading() {
   return (
-    <div
-      className="min-h-screen bg-white flex flex-col"
-      style={{
-        '--color-accent': config.accentColor,
-        '--color-primary': config.primaryColor,
-        '--color-secondary': config.secondaryColor,
-        '--color-header-text': config.headerTextColor
-      }}
-    >
-      <div className="flex-1">
-        <Routes>
-          {/* Admin Routes - No header */}
-          <Route path="/admin/login" element={<AdminLogin />} />
-          <Route
-            path="/admin/*"
-            element={
-              <ProtectedRoute>
-                <AdminPanel />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Public Routes - With header */}
-          <Route
-            path="*"
-            element={
-              <>
-                <Header />
-                <Routes>
-                  <Route path="/" element={<HomePage />} />
-                  <Route path="/catalogo" element={<CatalogPage />} />
-                </Routes>
-                <CartModal />
-              </>
-            }
-          />
-        </Routes>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="text-center">
+        <div className="w-12 h-12 border-4 border-gray-200 border-t-forest rounded-full animate-spin mx-auto mb-4"></div>
+        <p className="text-gray-400 font-bold text-sm uppercase tracking-widest">Cargando panel...</p>
       </div>
-      <Routes>
-        <Route path="/admin/*" element={null} />
-        <Route path="/admin/login" element={null} />
-        <Route path="*" element={<Footer />} />
-      </Routes>
     </div>
   );
 }
 
 export default function App() {
   return (
-    <Router>
-      <ConfigProvider>
-        <ProductsProvider>
-          <CartProvider>
-            <AuthProvider>
-              <AppContent />
-            </AuthProvider>
-          </CartProvider>
-        </ProductsProvider>
-      </ConfigProvider>
-    </Router>
+    <HelmetProvider>
+      <Router>
+        <ToastProvider>
+          <ConfigProvider>
+            <ProductsProvider>
+              <FamiliesProvider>
+                <CarouselProvider>
+                  <CartProvider>
+                    <CustomerAuthProvider>
+                      <WishlistProvider>
+                        <Routes>
+                          {/* Admin Routes - separate provider tree */}
+                          <Route path="/admin/login" element={<AuthProvider><AdminLogin /></AuthProvider>} />
+                          <Route
+                            path="/admin/*"
+                            element={
+                              <Suspense fallback={<AdminLoading />}>
+                                <AdminApp />
+                              </Suspense>
+                            }
+                          />
+
+                          {/* Public Routes - lightweight provider tree */}
+                          <Route path="*" element={<PublicApp />} />
+                        </Routes>
+                        <Toast />
+                      </WishlistProvider>
+                    </CustomerAuthProvider>
+                  </CartProvider>
+                </CarouselProvider>
+              </FamiliesProvider>
+            </ProductsProvider>
+          </ConfigProvider>
+        </ToastProvider>
+      </Router>
+    </HelmetProvider>
   );
 }

@@ -283,6 +283,75 @@ export default function ConfigEditor({ setHasUnsavedChanges }) {
                     </div>
                 </div>
 
+                {/* Pagos Online */}
+                <div className="card-bento p-10 bg-white">
+                    <h3 className="text-xl font-display font-black text-forest mb-8 flex items-center gap-3">
+                        <div className="w-1.5 h-6 bg-accent rounded-full" />
+                        Pagos Online
+                        {formData.stripePublishableKey?.startsWith('pk_test') && (
+                            <span className="ml-auto text-[10px] font-black text-amber-600 bg-amber-50 px-3 py-1.5 rounded-full border border-amber-200 uppercase tracking-widest">
+                                ⚡ Modo Test
+                            </span>
+                        )}
+                        {formData.stripePublishableKey?.startsWith('pk_live') && (
+                            <span className="ml-auto text-[10px] font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200 uppercase tracking-widest">
+                                ✓ Producción
+                            </span>
+                        )}
+                    </h3>
+
+                    <div className="space-y-6">
+                        <div className="flex items-center justify-between p-6 bg-organic rounded-3xl border border-forest/5">
+                            <div>
+                                <p className="text-sm font-black text-forest">Pago con Tarjeta (Stripe)</p>
+                                <p className="text-[10px] font-bold text-forest/40 uppercase tracking-widest mt-1">Acepta pagos online con tarjeta de crédito/débito</p>
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    className="sr-only peer"
+                                    checked={formData.enableOnlinePayments ?? false}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, enableOnlinePayments: e.target.checked }))}
+                                />
+                                <div className="w-14 h-8 bg-forest/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-accent focus:ring-0"></div>
+                            </label>
+                        </div>
+
+                        <div className="flex items-center justify-between p-6 bg-organic rounded-3xl border border-forest/5">
+                            <div>
+                                <p className="text-sm font-black text-forest">Pedido por WhatsApp</p>
+                                <p className="text-[10px] font-bold text-forest/40 uppercase tracking-widest mt-1">Permite confirmar pedidos vía WhatsApp</p>
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    className="sr-only peer"
+                                    checked={formData.enableWhatsappCheckout ?? true}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, enableWhatsappCheckout: e.target.checked }))}
+                                />
+                                <div className="w-14 h-8 bg-forest/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-accent focus:ring-0"></div>
+                            </label>
+                        </div>
+
+                        {formData.enableOnlinePayments && (
+                            <div className="space-y-4">
+                                <label className="block text-[10px] font-black text-forest/40 uppercase tracking-[0.3em] ml-1">Stripe Publishable Key</label>
+                                <input
+                                    type="text"
+                                    name="stripePublishableKey"
+                                    value={formData.stripePublishableKey || ''}
+                                    onChange={handleChange}
+                                    placeholder="pk_test_... o pk_live_..."
+                                    className="input-field font-mono text-sm"
+                                />
+                                <p className="text-[10px] text-forest/30 font-bold ml-1">
+                                    💡 La clave secreta (sk_...) se configura como variable de entorno en Supabase Edge Functions, nunca aquí.
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
                 {/* Footer and Social */}
                 <div className="card-bento p-10 bg-white">
                     <h3 className="text-xl font-display font-black text-forest mb-8 flex items-center gap-3">
